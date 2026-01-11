@@ -1,18 +1,91 @@
-# React + TypeScript + Vite
+# YT Music Player
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A feature-rich, hybrid music player application that brings the best of YouTube Music to your desktop and web browser. Built with modern web technologies, it offers a seamless listening experience with robust local integration when running as a desktop app.
 
-Currently, two official plugins are available:
+## 🏗 Architecture
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The application is designed as a hybrid system that can run in two modes: **Web** and **Electron (Desktop)**. This ensures cross-platform accessibility while unlocking native capabilities when installed on a device.
 
-## React Compiler
+### High-Level Architecture
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```mermaid
+graph TD
+    User[User] -->|Interacts| UI[React Frontend]
+    
+    subgraph "Core Application (Render Process)"
+        UI -->|State Management| Context[React Context / Hooks]
+        UI -->|Routing| Router[React Router]
+        UI -->|Audio| Player[YouTube IFrame Player / Audio Engine]
+    end
 
-## Expanding the ESLint configuration
+    subgraph "Data & Services"
+        UI -->|Auth & Sync| Firebase[Firebase Backend]
+        UI -->|Content| YT[YouTube API]
+    end
 
+    subgraph "Electron Native Layer (Main Process)"
+        ElectronMain[Main Process] -->|IPC| UI
+        ElectronMain -->|Native I/O| FileSystem[Local File System]
+        ElectronMain -->|System| OS[OS Integrations (Tray, Shortcuts)]
+    end
+
+    style ElectronMain fill:#f9f,stroke:#333,stroke-width:2px
+    style Firebase fill:#ff9,stroke:#333,stroke-width:2px
+```
+
+### Key Components
+
+*   **Frontend (Renderer)**: Built with **React 19**, **TypeScript**, and **Vite**. It handles the UI, state, and audio playback logic.
+*   **Desktop Layer (Main)**: Powered by **Electron**, enabling native features like file system access for downloads, global shortcuts, and a closer-to-native performance.
+*   **Styling**: Uses **TailwindCSS** for a responsive and modern design, with **Framer Motion** for smooth animations.
+*   **Backend**: Integrates with **Firebase** for user authentication and data synchronization.
+
+## ✨ Key Features
+
+*   **Hybrid Playback**: Stream directly from YouTube with a custom, ad-free UI.
+*   **Offline Support**: (Electron) Download tracks locally using native file system integration.
+*   **Smart Playlists**: Organize your music with ease.
+*   **Modern UI**: Sleek, dark-themed interface with smooth transitions.
+
+## 🚀 Development
+
+### Prerequisites
+*   Node.js (Latest LTS recommended)
+*   npm
+
+### Setup
+
+```bash
+# Install dependencies
+npm install
+```
+
+### Running the App
+
+**Web Mode:**
+```bash
+npm run dev
+```
+Runs the application in your default browser at `http://localhost:5173`.
+
+**Electron Mode:**
+```bash
+npm run electron:dev
+```
+Launches the application in a standalone Electron window with full native capabilities.
+
+### Building for Production
+
+```bash
+npm run electron:build
+```
+Generates installers for your OS (macOS .dmg/.zip, Windows .exe, Linux .AppImage) in the `release/` directory.
+
+## 🛠 Configuration details
+
+This project uses a standard Vite + React setup.
+
+### ESLint Configuration
 If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
 ```js
@@ -21,53 +94,22 @@ export default defineConfig([
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
       tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
       tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
     ],
     languageOptions: {
       parserOptions: {
         project: ['./tsconfig.node.json', './tsconfig.app.json'],
         tsconfigRootDir: import.meta.dirname,
       },
-      // other options...
     },
   },
 ])
 ```
+## Screenshots
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Desktop
+![Desktop App](screenshot/desktop-app.png)
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### Mobile
+![Mobile App](screenshot/mobile-app.png)
