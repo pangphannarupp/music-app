@@ -1,4 +1,4 @@
-# YT Music Player
+# Music App
 
 A feature-rich, hybrid music player application that brings the best of YouTube Music to your desktop and web browser. Built with modern web technologies, it offers a seamless listening experience with robust local integration when running as a desktop app.
 
