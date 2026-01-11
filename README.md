@@ -13,9 +13,9 @@ graph TD
     User[User] -->|Interacts| UI[React Frontend]
     
     subgraph "Core Application (Render Process)"
-        UI -->|State Management| Context[React Context / Hooks]
+        UI -->|State Management| Context["React Context / Hooks"]
         UI -->|Routing| Router[React Router]
-        UI -->|Audio| Player[YouTube IFrame Player / Audio Engine]
+        UI -->|Audio| Player["YouTube IFrame Player / Audio Engine"]
     end
 
     subgraph "Data & Services"
@@ -26,7 +26,7 @@ graph TD
     subgraph "Electron Native Layer (Main Process)"
         ElectronMain[Main Process] -->|IPC| UI
         ElectronMain -->|Native I/O| FileSystem[Local File System]
-        ElectronMain -->|System| OS[OS Integrations (Tray, Shortcuts)]
+        ElectronMain -->|System| OS["OS Integrations (Tray, Shortcuts)"]
     end
 
     style ElectronMain fill:#f9f,stroke:#333,stroke-width:2px
