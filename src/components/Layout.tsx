@@ -1,19 +1,20 @@
-import { type ReactNode, useState, useEffect } from 'react';
+import React, { type ReactNode, useState, useEffect, Suspense } from 'react';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
-import { HomeView } from './HomeView';
-import { FavoritesView } from './FavoritesView';
-import { SettingsView } from './SettingsView';
 import { PlayerControls } from './PlayerControls';
-import { LibraryView } from './LibraryView';
-
-import { PlaylistView } from './PlaylistView';
 import { Toast, type ToastProps } from './Toast';
-import { ArtistView } from './ArtistView';
-import { HistoryView } from './HistoryView';
 import { useLanguage } from '../context/LanguageContext';
 import { analytics } from '../firebase';
 import { logEvent } from 'firebase/analytics';
+
+// Lazy load view components
+const HomeView = React.lazy(() => import('./HomeView').then(module => ({ default: module.HomeView })));
+const FavoritesView = React.lazy(() => import('./FavoritesView').then(module => ({ default: module.FavoritesView })));
+const SettingsView = React.lazy(() => import('./SettingsView').then(module => ({ default: module.SettingsView })));
+const LibraryView = React.lazy(() => import('./LibraryView').then(module => ({ default: module.LibraryView })));
+const PlaylistView = React.lazy(() => import('./PlaylistView').then(module => ({ default: module.PlaylistView })));
+const ArtistView = React.lazy(() => import('./ArtistView').then(module => ({ default: module.ArtistView })));
+const HistoryView = React.lazy(() => import('./HistoryView').then(module => ({ default: module.HistoryView })));
 
 interface LayoutProps {
     children?: ReactNode;
@@ -148,7 +149,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     onScroll={handleScroll}
                     className="flex-1 px-2 py-2 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-40 md:py-10 md:px-12 md:pb-32 overflow-y-auto scroll-smooth"
                 >
-                    {renderView()}
+                    <Suspense fallback={
+                        <div className="flex items-center justify-center h-full w-full min-h-[50vh]">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+                        </div>
+                    }>
+                        {renderView()}
+                    </Suspense>
                     {children}
                 </main>
 
