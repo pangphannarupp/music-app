@@ -5,6 +5,7 @@ import { Music, Play, X, Trash2, Folder as FolderIcon, ChevronRight, ChevronDown
 import type { Song, Playlist } from '../types';
 import { InputModal } from './InputModal';
 import { DownloadsView } from './DownloadsView';
+import { PlaylistDetail } from './PlaylistDetail';
 
 interface LibraryViewProps {
     isOpen: boolean;
@@ -189,24 +190,13 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ isOpen, onClose, varia
             )}
 
             {/* Content */}
-            <div className={`flex-1 overflow-y-auto ${variant === 'drawer' ? 'p-6' : 'py-6'}`}>
+            <div className={`flex-1 overflow-y-auto ${variant === 'drawer' ? 'p-0' : 'py-6'}`}>
                 {selectedPlaylist ? (
-                    <div>
-                        <div className="flex gap-4 mb-6">
-                            <div className="w-32 h-32 bg-zinc-200 dark:bg-zinc-800 rounded-lg flex items-center justify-center shrink-0 overflow-hidden shadow-lg">
-                                {selectedPlaylist.songs.length > 0 ? (
-                                    <img src={selectedPlaylist.songs[0].thumbnail} className="w-full h-full object-cover" />
-                                ) : (
-                                    <Music className="w-12 h-12 text-zinc-400 dark:text-zinc-600" />
-                                )}
-                            </div>
-                            <div className="flex flex-col justify-end pb-2">
-                                <p className="text-zinc-500 dark:text-zinc-400 text-xs uppercase font-bold tracking-widest mb-1">Playlist</p>
-                                <h1 className="text-zinc-900 dark:text-white text-2xl font-bold mb-2">{selectedPlaylist.name}</h1>
-                                <p className="text-zinc-500 text-sm">{selectedPlaylist.songs.length} {t.songs}</p>
-                            </div>
-                        </div>
-                        {renderSongList(selectedPlaylist.songs, true, () => { })}
+                    <div className="h-full">
+                        <PlaylistDetail
+                            playlist={selectedPlaylist}
+                            onBack={() => setSelectedPlaylist(null)}
+                        />
                     </div>
                 ) : selectedArtist ? (
                     <div>

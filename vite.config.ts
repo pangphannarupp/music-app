@@ -13,10 +13,14 @@ export default defineConfig({
   build: {
     outDir: 'dist/content',
     rollupOptions: {
+      input: {
+        main: 'index.html',
+        mini: 'src/mini-player.html'
+      },
       output: {
-        entryFileNames: 'assets/[name]-[hash].js',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]',
+        entryFileNames: 'assets/[name].js',
+        chunkFileNames: 'assets/[name].js',
+        assetFileNames: 'assets/[name].[ext]',
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
             return 'vendor';

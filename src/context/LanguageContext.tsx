@@ -74,6 +74,10 @@ interface Translations {
     listenAgain: string;
     newSongs: string;
     downloads: string;
+    dataManagement: string;
+    exportData: string;
+    importData: string;
+    importConfirm: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -127,7 +131,7 @@ const translations: Record<Language, Translations> = {
         removeSongConfirm: 'Are you sure you want to remove this song from the playlist?',
         emptyPlaylist: 'This playlist is empty.',
         searchToAdd: 'Search for songs and add them to this playlist.',
-        appName: 'Music',
+        appName: 'Your Music',
         menu: 'Menu',
         empty: 'Empty',
         myFolder: 'My Folder',
@@ -148,7 +152,11 @@ const translations: Record<Language, Translations> = {
         downloadError: 'Download failed',
         recentSearches: 'Recent Searches',
         listenAgain: 'Listen Again',
-        newSongs: 'New Songs'
+        newSongs: 'New Songs',
+        dataManagement: 'Data Management',
+        exportData: 'Export Backup',
+        importData: 'Import Backup',
+        importConfirm: 'This will overwrite your current data. Continue?'
     },
     km: {
         home: 'ទំព័រដើម',
@@ -200,7 +208,7 @@ const translations: Record<Language, Translations> = {
         removeSongConfirm: 'តើអ្នកប្រាកដថាចង់លុបបទចម្រៀងនេះពីបញ្ជីចាក់ឬទេ?',
         emptyPlaylist: 'បញ្ជីចាក់នេះទទេ',
         searchToAdd: 'ស្វែងរកបទចម្រៀងហើយដាក់ចូលក្នុងបញ្ជីចាក់នេះ',
-        appName: 'តន្ត្រី',
+        appName: 'តន្ត្រីរបស់អ្នក',
         menu: 'ម៉ឺនុយ',
         empty: 'ទទេ',
         myFolder: 'ថតរបស់ខ្ញុំ',
@@ -221,7 +229,11 @@ const translations: Record<Language, Translations> = {
         downloadError: 'ទាញយកបរាជ័យ',
         recentSearches: 'ការស្វែងរកថ្មីៗ',
         listenAgain: 'ស្តាប់ម្តងទៀត',
-        newSongs: 'បទចម្រៀងថ្មីៗ'
+        newSongs: 'បទចម្រៀងថ្មីៗ',
+        dataManagement: 'ការគ្រប់គ្រងទិន្នន័យ',
+        exportData: 'នាំចេញទិន្នន័យ',
+        importData: 'នាំចូលទិន្នន័យ',
+        importConfirm: 'សកម្មភាពនេះនឹងលុបនិងជំនួសទិន្នន័យបច្ចុប្បន្នរបស់អ្នក។ បន្តដែរឬទេ?'
     }
 };
 

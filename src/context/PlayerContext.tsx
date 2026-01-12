@@ -50,10 +50,29 @@ interface PlayerContextType {
     deleteFolder: (id: string) => void;
     addToPlaylist: (playlistId: string, song: Song) => void;
     removeFromPlaylist: (playlistId: string, songId: string) => void;
+    updatePlaylist: (id: string, data: Partial<Playlist>) => void;
+    reorderPlaylist: (id: string, newSongs: Song[]) => void;
+
 
     // Volume
     volume: number;
     setVolume: (vol: number) => void;
+
+    // Visualizer
+    analyser: AnalyserNode | null;
+
+    // Sleep Timer
+    sleepTimerEnd: number | null;
+    setSleepTimer: (minutes: number) => void;
+
+    // PiP
+    togglePiP: () => Promise<void>;
+
+    // Equalizer
+    eqBands: number[];
+    setEqBand: (index: number, gain: number) => void;
+    currentPreset: string;
+    setPreset: (presetId: string) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -61,6 +80,8 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Player Core Logic
     const [currentSong, setCurrentSong] = useState<Song | null>(null);
+    // ...
+
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
     const [currentTime, setCurrentTime] = useState(0);
@@ -81,6 +102,140 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     // Volume State (0.0 to 1.0)
     const [volume, setVolume] = useState(0.8);
 
+    const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+
+    // EQ State
+    const [eqBands, setEqBands] = useState<number[]>([0, 0, 0, 0, 0]); // 60, 230, 910, 4k, 14k
+    const [currentPreset, setCurrentPreset] = useState('manual');
+    const filtersRef = useRef<BiquadFilterNode[]>([]);
+    const audioCtxRef = useRef<AudioContext | null>(null);
+
+    // Load EQ settings
+    useEffect(() => {
+        const savedEq = localStorage.getItem('equalizer_bands');
+        const savedPreset = localStorage.getItem('equalizer_preset');
+        if (savedEq) setEqBands(JSON.parse(savedEq));
+        if (savedPreset) setCurrentPreset(savedPreset);
+    }, []);
+
+    // Save EQ settings
+    useEffect(() => {
+        localStorage.setItem('equalizer_bands', JSON.stringify(eqBands));
+        localStorage.setItem('equalizer_preset', JSON.stringify(currentPreset));
+
+        // Update live filters
+        filtersRef.current.forEach((filter, index) => {
+            if (filter) {
+                // Smooth transition
+                filter.gain.setTargetAtTime(eqBands[index], (audioCtxRef.current?.currentTime || 0), 0.1);
+            }
+        });
+    }, [eqBands, currentPreset]);
+
+    const setEqBand = (index: number, gain: number) => {
+        setCurrentPreset('manual');
+        setEqBands(prev => {
+            const newBands = [...prev];
+            newBands[index] = gain;
+            return newBands;
+        });
+    };
+
+    const setPreset = (presetId: string) => {
+        // Presets definition
+        const presets: Record<string, number[]> = {
+            'flat': [0, 0, 0, 0, 0],
+            'bass': [5, 3, 0, 0, 0],
+            'rock': [4, 2, -2, 3, 4],
+            'pop': [-1, 2, 4, 1, -2],
+            'vocal': [-2, -1, 3, 4, 1],
+            'classical': [4, 2, -2, 2, 4],
+            'manual': eqBands
+        };
+
+        if (presets[presetId]) {
+            setCurrentPreset(presetId);
+            if (presetId !== 'manual') {
+                setEqBands(presets[presetId]);
+            }
+        }
+    };
+
+    // Audio Context Initialization for Visualizer & EQ
+    useEffect(() => {
+        if (audioRef.current && isPlaying) {
+            try {
+                // Check if context already exists (we might reuse it, but simpler to ensure setup)
+                // Note: We need to handle re-initialization carefully or check if nodes are connected
+                if ((audioRef.current as any)._audioGraphAttached) return;
+
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                const audioCtx = new AudioContext();
+
+                const source = audioCtx.createMediaElementSource(audioRef.current);
+                const analyserNode = audioCtx.createAnalyser();
+                analyserNode.fftSize = 256;
+
+                // Create EQ Filters
+                const frequencies = [60, 230, 910, 4000, 14000];
+                const filters = frequencies.map((freq, i) => {
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = i === 0 ? 'lowshelf' : i === frequencies.length - 1 ? 'highshelf' : 'peaking';
+                    filter.frequency.value = freq;
+                    filter.gain.value = eqBands[i];
+                    return filter;
+                });
+
+                filtersRef.current = filters;
+
+                // Chain: Source -> Filter0 -> Filter1 ... -> Analyser -> Destination
+                let currentNode: AudioNode = source;
+                filters.forEach(filter => {
+                    currentNode.connect(filter);
+                    currentNode = filter;
+                });
+
+                currentNode.connect(analyserNode);
+                analyserNode.connect(audioCtx.destination);
+
+                setAnalyser(analyserNode);
+                (audioRef.current as any)._audioGraphAttached = true;
+
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (error) {
+                console.error("Failed to init Audio Graph:", error);
+                // Don't crash app
+            }
+        }
+    }, [isPlaying]); // Removed 'analyser' dependency to prevent loop, relies on _audioGraphAttached check
+
+    // Time Update & Progress
+    useEffect(() => {
+        if (!isPlaying || !audioRef.current) return;
+
+        const interval = setInterval(() => {
+            if (audioRef.current) {
+                setCurrentTime(audioRef.current.currentTime);
+                // Taskbar Progress
+                if (window.electron?.setProgressBar && duration > 0) {
+                    window.electron.setProgressBar(audioRef.current.currentTime / duration);
+                }
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [isPlaying, duration]);
+
+    // Reset progress on end/pause check
+    useEffect(() => {
+        if (!isPlaying && window.electron?.setProgressBar) {
+            // -1 removes the progress bar
+            window.electron.setProgressBar(-1);
+        }
+    }, [isPlaying]);
+
     // Library State with Persistence
     const [favorites, setFavorites] = useState<Song[]>(() => {
         const saved = localStorage.getItem('favorites');
@@ -97,7 +252,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return saved ? JSON.parse(saved) : [];
     });
 
-    // Persistence Effects
+
     useEffect(() => { localStorage.setItem('favorites', JSON.stringify(favorites)); }, [favorites]);
     useEffect(() => { localStorage.setItem('playlists', JSON.stringify(playlists)); }, [playlists]);
     useEffect(() => { localStorage.setItem('playlist_folders', JSON.stringify(folders)); }, [folders]);
@@ -115,15 +270,20 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     }, [currentSong]);
 
-    // Fetch related songs
+    // Fetch related songs and filter out recently played
     useEffect(() => {
         if (currentSong) {
             getRelatedVideos(currentSong.id, currentSong.artist).then((songs) => {
-                const filtered = songs.filter(s => s.id !== currentSong.id);
+                let filtered = songs.filter(s => s.id !== currentSong.id);
+
+                // Avoid looping back to recent history (last 50 songs)
+                const historyIds = new Set(playbackHistory.slice(0, 50).map(s => s.id));
+                filtered = filtered.filter(s => !historyIds.has(s.id));
+
                 setRelatedSongs(filtered);
             });
         }
-    }, [currentSong]);
+    }, [currentSong]); // playbackHistory is stable enough here or we accept minor staleness to avoid double fetch
 
     // Player Actions
     const playSong = (song: Song) => {
@@ -260,6 +420,163 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }));
     };
 
+    const updatePlaylist = (id: string, data: Partial<Playlist>) => {
+        setPlaylists(prev => prev.map(p => {
+            if (p.id === id) {
+                return { ...p, ...data };
+            }
+            return p;
+        }));
+    };
+
+    const reorderPlaylist = (id: string, newSongs: Song[]) => {
+        setPlaylists(prev => prev.map(p => {
+            if (p.id === id) {
+                return { ...p, songs: newSongs };
+            }
+            return p;
+        }));
+    };
+
+    // Sleep Timer
+    const [sleepTimerEnd, setSleepTimerEnd] = useState<number | null>(null);
+
+    const setSleepTimer = (minutes: number) => {
+        if (minutes === 0) {
+            setSleepTimerEnd(null);
+            return;
+        }
+        setSleepTimerEnd(Date.now() + minutes * 60 * 1000);
+    };
+
+    useEffect(() => {
+        if (!sleepTimerEnd) return;
+
+        const interval = setInterval(() => {
+            if (Date.now() >= sleepTimerEnd) {
+                setIsPlaying(false);
+                setSleepTimerEnd(null);
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [sleepTimerEnd]);
+
+    // Mini Player / PiP Logic
+    const togglePiP = async () => {
+        if (window.electron?.toggleMiniPlayer) {
+            window.electron.toggleMiniPlayer();
+        } else {
+            console.warn("Mini Player not supported in this environment");
+        }
+    };
+
+    // Sync state: Send update whenever state changes
+    useEffect(() => {
+        if (window.electron?.updateMiniPlayer) {
+            window.electron.updateMiniPlayer({
+                isPlaying,
+                currentTime,
+                duration,
+                currentSong: currentSong ? {
+                    title: currentSong.title,
+                    artist: currentSong.artist,
+                    thumbnail: currentSong.thumbnail
+                } : null
+            });
+        }
+    }, [isPlaying, currentSong, currentTime, duration]);
+
+    // Init Listener: Handle request for state (use ref to access current state without re-binding)
+    const stateRef = useRef({ isPlaying, currentSong, currentTime, duration });
+    useEffect(() => {
+        stateRef.current = { isPlaying, currentSong, currentTime, duration };
+    }, [isPlaying, currentSong, currentTime, duration]);
+
+    useEffect(() => {
+        if (window.electron?.onGetPlayerState) {
+            window.electron.onGetPlayerState(() => {
+                const { isPlaying, currentSong: song, currentTime, duration } = stateRef.current;
+                window.electron?.updateMiniPlayer({
+                    isPlaying,
+                    currentTime,
+                    duration,
+                    currentSong: song ? {
+                        title: song.title,
+                        artist: song.artist,
+                        thumbnail: song.thumbnail
+                    } : null
+                });
+            });
+        }
+    }, []);
+
+    // Global Media Shortcuts & Mini Player Actions
+    const textRef = useRef({ togglePlay, playNext, playPrevious });
+    useEffect(() => {
+        textRef.current = { togglePlay, playNext, playPrevious };
+    }, [togglePlay, playNext, playPrevious]);
+
+    useEffect(() => {
+        if (!window.electron) return;
+
+        const handleAction = (action: string) => {
+            if (action === 'play-pause') textRef.current.togglePlay();
+            if (action === 'next') textRef.current.playNext();
+            if (action === 'prev') textRef.current.playPrevious();
+        };
+
+        const handlePlayPause = () => textRef.current.togglePlay();
+        const handleNext = () => textRef.current.playNext();
+        const handlePrevious = () => textRef.current.playPrevious();
+
+        window.electron.onMediaAction(handleAction);
+        window.electron.onMediaPlayPause(handlePlayPause);
+        window.electron.onMediaNext(handleNext);
+        window.electron.onMediaPrevious(handlePrevious);
+
+        return () => {
+            // We need to implement remove listener in preload if we want cleanup, 
+            // but for now relying on app lifecycle is okay.
+            if (window.electron?.removeMediaListeners) {
+                window.electron.removeMediaListeners();
+            }
+        };
+    }, []);
+
+    // Discord Rich Presence
+    useEffect(() => {
+        if (!window.electron?.setDiscordActivity) return;
+
+        if (!currentSong) {
+            window.electron.setDiscordActivity({
+                details: 'Idle',
+                state: 'Waiting for music...',
+            });
+            return;
+        }
+
+        if (isPlaying) {
+            window.electron.setDiscordActivity({
+                details: currentSong.title,
+                state: currentSong.artist || 'Unknown Artist',
+                largeImageKey: 'icon', // Ensure this key exists in Discord App assets or remove if not set up
+                largeImageText: 'Music App',
+                smallImageKey: isPlaying ? 'play' : 'pause',
+                smallImageText: isPlaying ? 'Playing' : 'Paused',
+                instance: false,
+            });
+        } else {
+            window.electron.setDiscordActivity({
+                details: currentSong.title,
+                state: 'Paused',
+                largeImageKey: 'icon',
+                largeImageText: 'Music App',
+                instance: false,
+            });
+        }
+    }, [currentSong, isPlaying]);
+
     return (
         <PlayerContext.Provider value={{
             currentSong,
@@ -297,7 +614,17 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             addToPlaylist,
             removeFromPlaylist,
             volume,
-            setVolume
+            setVolume,
+            analyser,
+            sleepTimerEnd,
+            setSleepTimer,
+            togglePiP,
+            eqBands,
+            setEqBand,
+            currentPreset,
+            setPreset,
+            updatePlaylist,
+            reorderPlaylist
         }}>
             {children}
         </PlayerContext.Provider>

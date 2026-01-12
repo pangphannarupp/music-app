@@ -35,10 +35,23 @@ export interface Song {
     localPath?: string;
 }
 
+export interface EqualizerBand {
+    frequency: number;
+    gain: number;
+    type: 'lowshelf' | 'peaking' | 'highshelf';
+}
+
+export interface AudioPreset {
+    id: string;
+    name: string;
+    gains: number[]; // 5 bands
+}
+
 export interface Playlist {
     id: string;
     name: string;
     songs: Song[];
     folderId?: string;
     createdAt: number;
+    coverImage?: string; // Base64 or URL
 }

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Trash2, Info, Github, Moon, Sun, Globe, Palette, Monitor } from 'lucide-react';
+import { Trash2, Info, Github, Moon, Sun, Globe, Palette, Monitor, Download, Upload } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ConfirmModal } from './ConfirmModal';
+import { exportData, importData } from '../utils/dataHandler';
 
 export const SettingsView: React.FC = () => {
     const { mode, setMode, color, setColor, predefinedColors } = useTheme();
@@ -12,6 +13,25 @@ export const SettingsView: React.FC = () => {
     const handleClearData = () => {
         localStorage.clear();
         window.location.reload();
+    };
+
+    const handleExport = () => {
+        exportData();
+    };
+
+    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (confirm(t.importConfirm || "This will overwrite your current data. Continue?")) {
+                try {
+                    await importData(file);
+                    alert("Data restored successfully!");
+                    window.location.reload();
+                } catch (error) {
+                    alert("Failed to import data: " + error);
+                }
+            }
+        }
     };
 
     const modeOptions: { id: ThemeMode; icon: any; label: string }[] = [
@@ -110,17 +130,41 @@ export const SettingsView: React.FC = () => {
                 <div className="bg-white dark:bg-zinc-800/50 rounded-xl p-6 border border-zinc-200 dark:border-white/5 shadow-sm">
                     <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                         <Trash2 className="w-5 h-5 text-red-500" />
-                        {t.clearData}
+                        {t.dataManagement}
                     </h3>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-4">
-                        {t.clearDataDesc}
-                    </p>
-                    <button
-                        onClick={() => setShowConfirm(true)}
-                        className="px-4 py-2 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg transition font-medium text-sm"
-                    >
-                        {t.clearData}
-                    </button>
+
+                    <div className="flex gap-3 mb-6">
+                        <button
+                            onClick={handleExport}
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-700/50 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-xl transition font-medium"
+                        >
+                            <Download className="w-5 h-5" />
+                            {t.exportData}
+                        </button>
+
+                        <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 dark:bg-zinc-700/50 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-xl transition font-medium cursor-pointer">
+                            <Upload className="w-5 h-5" />
+                            {t.importData}
+                            <input
+                                type="file"
+                                accept=".json"
+                                className="hidden"
+                                onChange={handleImport}
+                            />
+                        </label>
+                    </div>
+
+                    <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
+                        <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-3">
+                            {t.clearDataDesc}
+                        </p>
+                        <button
+                            onClick={() => setShowConfirm(true)}
+                            className="px-4 py-2 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg transition font-medium text-sm"
+                        >
+                            {t.clearData}
+                        </button>
+                    </div>
                 </div>
 
                 {/* About Section */}

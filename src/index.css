@@ -46,3 +46,20 @@
     /* make scrollbar transparent */
   }
 }
+
+@keyframes bounce {
+
+  0%,
+  100% {
+    transform: scaleY(0.4);
+  }
+
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-music-bar {
+  animation: bounce 1s infinite ease-in-out;
+  transform-origin: bottom;
+}

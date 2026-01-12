@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { usePlayer } from '../context/PlayerContext';
-import { Music, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, ChevronDown, ListMusic, Heart, PlusCircle, Download } from 'lucide-react';
+import { Music, Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, ChevronDown, ListMusic, Heart, PlusCircle, Download, MessageSquareQuote, Moon, PictureInPicture2 } from 'lucide-react';
 import { PlaylistModal } from './PlaylistModal';
 import { motion, type PanInfo } from 'framer-motion';
 import { PlayingAnimation } from './PlayingAnimation';
 import { useLanguage } from '../context/LanguageContext';
 import { Toast } from './Toast';
+import { fetchLyrics, type LyricsData } from '../api/lyrics';
+import { AudioVisualizer } from './AudioVisualizer';
+import { EqualizerModal } from './EqualizerModal';
+import { Sliders } from 'lucide-react';
 
 export const FullScreenPlayer: React.FC = () => {
     const { t } = useLanguage();
@@ -27,11 +31,16 @@ export const FullScreenPlayer: React.FC = () => {
         duration,
         seek,
         volume,
-        setVolume
+        setVolume,
+        analyser,
+        sleepTimerEnd,
+        setSleepTimer,
+        togglePiP
     } = usePlayer();
 
     const isFavorite = favorites.some(s => s.id === currentSong?.id);
     const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+    const [isEqOpen, setIsEqOpen] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
     const [toast, setToast] = useState<{ isVisible: boolean; message: string; type: 'success' | 'error' }>({
         isVisible: false,
@@ -39,6 +48,52 @@ export const FullScreenPlayer: React.FC = () => {
         type: 'success'
     });
     const [downloadProgress, setDownloadProgress] = useState('0%');
+
+    // Lyrics State
+    const [showLyrics, setShowLyrics] = useState(false);
+    const [showTimerMenu, setShowTimerMenu] = useState(false);
+    const [lyrics, setLyrics] = useState<LyricsData | null>(null);
+    const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
+    const lyricsScrollRef = useRef<HTMLDivElement>(null);
+
+    // Fetch lyrics when song changes
+    useEffect(() => {
+        if (!currentSong) {
+            setLyrics(null);
+            return;
+        }
+
+        const loadLyrics = async () => {
+            setIsLoadingLyrics(true);
+            setLyrics(null); // Reset
+            const duration = currentSong.duration ? Number(currentSong.duration) : undefined;
+            const data = await fetchLyrics(currentSong.artist, currentSong.title, duration);
+            setLyrics(data);
+            setIsLoadingLyrics(false);
+        };
+
+        if (isFullScreen) {
+            loadLyrics();
+        }
+    }, [currentSong?.id, isFullScreen]);
+
+    // Auto-scroll lyrics
+    useEffect(() => {
+        if (!showLyrics || !lyrics?.syncedLines || !lyricsScrollRef.current) return;
+
+        // Find active line index
+        const activeIndex = lyrics.syncedLines.findIndex((line, i) => {
+            const nextLine = lyrics.syncedLines![i + 1];
+            return currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
+        });
+
+        if (activeIndex !== -1) {
+            const activeEl = lyricsScrollRef.current.children[activeIndex] as HTMLElement;
+            if (activeEl) {
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    }, [currentTime, showLyrics, lyrics]);
 
     // Drag handling
     const [isQueueOpen, setIsQueueOpen] = useState(false);
@@ -144,6 +199,20 @@ export const FullScreenPlayer: React.FC = () => {
     };
 
 
+
+    // PiP Handler
+    const handlePiPToggle = async () => {
+        try {
+            await togglePiP();
+        } catch (error) {
+            setToast({
+                isVisible: true,
+                message: error instanceof Error ? error.message : "Failed to enter PiP mode",
+                type: 'error'
+            });
+            setTimeout(() => setToast(prev => ({ ...prev, isVisible: false })), 3000);
+        }
+    };
     // Derived state
     const isLoadingRelated = relatedSongs.length === 0;
 
@@ -169,32 +238,141 @@ export const FullScreenPlayer: React.FC = () => {
                     <ChevronDown className="w-8 h-8" />
                 </button>
                 <span className="text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-xs font-bold">{t.nowPlaying}</span>
-                <div className="w-12" /> {/* Spacer */}
+
+                <div className="flex items-center gap-2">
+                    {/* PiP Toggle */}
+                    <button
+                        onClick={handlePiPToggle}
+                        className="p-2 rounded-full text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10 transition"
+                        title="Picture in Picture"
+                    >
+                        <PictureInPicture2 className="w-6 h-6" />
+                    </button>
+
+                    {/* Sleep Timer */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowTimerMenu(!showTimerMenu)}
+                            className={`p-2 rounded-full transition ${sleepTimerEnd ? 'bg-primary/20 text-primary' : 'text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10'}`}
+                        >
+                            <Moon className={`w-6 h-6 ${sleepTimerEnd ? 'fill-current' : ''}`} />
+                            {sleepTimerEnd && (
+                                <span className="absolute -bottom-1 -right-1 text-[10px] font-bold bg-zinc-900 text-white dark:bg-white dark:text-black px-1 rounded-sm">
+                                    {Math.ceil((sleepTimerEnd - Date.now()) / 60000)}m
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Timer Menu */}
+                        {showTimerMenu && (
+                            <div className="absolute top-full right-0 mt-2 w-48 bg-white dark:bg-zinc-900 rounded-xl shadow-xl border border-zinc-200 dark:border-white/10 overflow-hidden z-50">
+                                <div className="p-2 flex flex-col gap-1">
+                                    <h4 className="px-3 py-2 text-xs font-bold text-zinc-500 uppercase">Sleep Timer</h4>
+                                    {[15, 30, 60].map(mins => (
+                                        <button
+                                            key={mins}
+                                            onClick={() => { setSleepTimer(mins); setShowTimerMenu(false); }}
+                                            className="px-3 py-2 text-sm text-left hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition dark:text-zinc-200"
+                                        >
+                                            {mins} Minutes
+                                        </button>
+                                    ))}
+                                    {sleepTimerEnd && (
+                                        <button
+                                            onClick={() => { setSleepTimer(0); setShowTimerMenu(false); }}
+                                            className="px-3 py-2 text-sm text-left text-red-500 hover:bg-red-500/10 rounded-lg transition mt-1 border-t border-zinc-100 dark:border-white/5"
+                                        >
+                                            Turn Off
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={() => setShowLyrics(!showLyrics)}
+                        className={`p-2 rounded-full transition ${showLyrics ? 'bg-primary/20 text-primary' : 'text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10'}`}
+                    >
+                        <MessageSquareQuote className={`w-6 h-6 ${showLyrics ? 'fill-current' : ''}`} />
+                    </button>
+                </div>
             </div>
 
             {/* Main Content - No Scroll, Flex Layout to fit screen */}
             <div className="flex-1 w-full flex flex-col items-center justify-between pb-8 px-8 min-h-0 overflow-hidden">
 
-                {/* Artwork - Flexible Height */}
-                <div className="flex-1 w-full flex items-center justify-center min-h-0 py-4">
-                    <div className="h-full aspect-square max-h-[40vh] md:max-h-[50vh] rounded-2xl overflow-hidden shadow-2xl relative group bg-zinc-800/20">
-                        {currentSong.thumbnail ? (
-                            <img
-                                src={currentSong.thumbnail}
-                                alt={currentSong.title}
-                                className="w-full h-full object-cover"
-                            />
+                {/* Artwork OR Lyrics */}
+                {showLyrics ? (
+                    <div className="flex-1 w-full flex flex-col items-center justify-start min-h-0 py-4 overflow-hidden relative">
+                        {isLoadingLyrics ? (
+                            <div className="flex items-center justify-center h-full text-zinc-500">Loading lyrics...</div>
+                        ) : lyrics ? (
+                            <>
+                                {/* Status Badge */}
+                                <div className="absolute top-2 right-4 z-10 px-2 py-1 rounded bg-black/20 dark:bg-white/10 text-[10px] text-zinc-500 dark:text-zinc-400 font-medium tracking-wider uppercase backdrop-blur-sm">
+                                    {lyrics.syncedLines ? 'Synced' : 'Plain Text'}
+                                </div>
+
+                                {lyrics.syncedLines ? (
+                                    <div
+                                        ref={lyricsScrollRef}
+                                        className="w-full h-full overflow-y-auto px-4 py-12 text-center scroll-smooth no-scrollbar mask-gradient"
+                                    >
+                                        {lyrics.syncedLines.map((line, index) => {
+                                            const nextLine = lyrics.syncedLines![index + 1];
+                                            const isActive = currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
+                                            return (
+                                                <p
+                                                    key={line.time}
+                                                    className={`mb-6 text-2xl md:text-3xl font-bold transition-all duration-300 ${isActive
+                                                        ? 'text-zinc-900 dark:text-white scale-110 origin-center'
+                                                        : 'text-zinc-400 dark:text-zinc-600 blur-[1px] hover:blur-0'
+                                                        }`}
+                                                    onClick={() => seek(line.time)} // Allow tap to seek
+                                                >
+                                                    {line.text}
+                                                </p>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="w-full h-full overflow-y-auto px-4 py-8 text-center whitespace-pre-wrap text-lg md:text-xl text-zinc-700 dark:text-zinc-300 font-medium leading-relaxed no-scrollbar opacity-80">
+                                        {lyrics.plainLyrics}
+                                    </div>
+                                )}
+                            </>
                         ) : (
-                            <div className="w-full h-full bg-zinc-800/50 flex items-center justify-center border border-white/5">
-                                <Music className="w-1/3 h-1/3 text-zinc-500" />
+                            <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-2">
+                                <MessageSquareQuote className="w-12 h-12 opacity-50" />
+                                <p>No lyrics found</p>
                             </div>
                         )}
-                        {/* Play/Pause Overlay */}
-                        <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-md p-2 rounded-lg">
-                            <PlayingAnimation isPlaying={isPlaying} color="bg-white" />
+                        {/* Fade gradients combined with mask logic ideally, but simple gradients work for now */}
+                        <div className="absolute top-0 inset-x-0 h-16 bg-gradient-to-b from-white dark:from-black to-transparent pointer-events-none" />
+                        <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-white dark:from-black to-transparent pointer-events-none" />
+                    </div>
+                ) : (
+                    <div className="flex-1 w-full flex items-center justify-center min-h-0 py-4">
+                        <div className="h-full aspect-square max-h-[40vh] md:max-h-[50vh] rounded-2xl overflow-hidden shadow-2xl relative group bg-zinc-800/20">
+                            {currentSong.thumbnail ? (
+                                <img
+                                    src={currentSong.thumbnail}
+                                    alt={currentSong.title}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-zinc-800/50 flex items-center justify-center border border-white/5">
+                                    <Music className="w-1/3 h-1/3 text-zinc-500" />
+                                </div>
+                            )}
+                            {/* Play/Pause Overlay */}
+                            <div className="absolute bottom-4 right-4 bg-black/40 backdrop-blur-md p-2 rounded-lg">
+                                <PlayingAnimation isPlaying={isPlaying} color="bg-white" />
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Controls Container - Fixed Stack */}
                 <div className="w-full max-w-lg flex flex-col items-center gap-6 shrink-0 z-10">
@@ -304,7 +482,7 @@ export const FullScreenPlayer: React.FC = () => {
                         </button>
                     </div>
 
-                    {/* Volume Control */}
+                    {/* Volume Control & EQ */}
                     <div className="w-full max-w-sm px-4 flex items-center gap-4 mx-auto pb-4">
                         <button
                             onClick={() => setVolume(volume === 0 ? 0.8 : 0)}
@@ -331,10 +509,20 @@ export const FullScreenPlayer: React.FC = () => {
                                 className="absolute inset-0 w-full opacity-0 cursor-pointer"
                             />
                         </div>
-                    </div>
 
+                        {/* EQ Button */}
+                        <button
+                            onClick={() => setIsEqOpen(true)}
+                            className="p-2 rounded-full text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10 transition"
+                            title="Equalizer"
+                        >
+                            <Sliders className="w-5 h-5" />
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            <EqualizerModal isOpen={isEqOpen} onClose={() => setIsEqOpen(false)} />
 
             {/* Up Next Bottom Sheet */}
             <motion.div
@@ -406,6 +594,12 @@ export const FullScreenPlayer: React.FC = () => {
                 </div>
             </motion.div>
 
+
+
+            {/* Audio Visualizer Layer - Behind content, bottom aligned */}
+            <div className="absolute inset-x-0 bottom-0 h-1/3 md:h-1/2 z-[1] opacity-60 pointer-events-none mix-blend-screen">
+                <AudioVisualizer analyser={analyser} isPlaying={isPlaying} />
+            </div>
 
             {/* Background Gradient Mesh (Optional Visual Flare) */}
             <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
