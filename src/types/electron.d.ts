@@ -11,6 +11,7 @@ export interface ElectronAPI {
     fetchUrl: (url: string) => Promise<{ success: boolean; data?: any; error?: string }>;
     getAudioUrl: (videoId: string) => Promise<{ success: boolean; url?: string; error?: string }>;
     searchVideos: (query: string) => Promise<{ success: boolean; songs?: any[]; error?: string }>;
+    listDownloads: () => Promise<{ success: boolean; files?: any[]; error?: string }>;
     isElectron: boolean;
 }
 

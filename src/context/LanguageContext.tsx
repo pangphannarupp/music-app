@@ -73,6 +73,7 @@ interface Translations {
     recentSearches: string;
     listenAgain: string;
     newSongs: string;
+    downloads: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -103,6 +104,7 @@ const translations: Record<Language, Translations> = {
         notifications: 'Notifications',
         back: 'Back',
         playlistsTab: 'Playlists',
+        downloads: 'Downloads',
         newPlaylist: 'New Playlist',
         newFolder: 'New Folder',
         emptyFolder: 'Empty folder',
@@ -175,6 +177,7 @@ const translations: Record<Language, Translations> = {
         notifications: 'ការជូនដំណឹង',
         back: 'ត្រឡប់',
         playlistsTab: 'បញ្ជីចាក់',
+        downloads: 'ដែលបានទាញយក',
         newPlaylist: 'បញ្ជីចាក់ថ្មី',
         newFolder: 'ថតថ្មី',
         emptyFolder: 'ថតទទេ',

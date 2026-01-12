@@ -61,9 +61,16 @@ def download_audio(video_id, output_path, artist="Unknown Artist", title="Unknow
     if output_dir:
         Path(output_dir).mkdir(parents=True, exist_ok=True)
     
-    # Remove .mp3 extension if present
+    # Remove .mp3 extension if present to avoid double extension if we force one
     if output_path.endswith('.mp3'):
         output_path = output_path[:-4]
+    
+    # We want to preserve the name chosen by user but use the correct extension
+    # If we can't convert to mp3 (no ffmpeg), we should let yt-dlp use the source extension
+    # But we want the file to be recognizable.
+    
+    # NOTE: user chose a filename.
+
     
     def progress_hook(d):
         if d['status'] == 'downloading':
@@ -92,10 +99,10 @@ def download_audio(video_id, output_path, artist="Unknown Artist", title="Unknow
             }), flush=True)
     
     ydl_opts = {
-        'format': 'bestaudio/best',
+        'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best',
         # FFmpeg explicitly disabled
         'postprocessors': [], 
-        'outtmpl': output_path, 
+        'outtmpl': f"{output_path}.%(ext)s",
         'quiet': False,
         'no_warnings': True,
         'progress_hooks': [progress_hook],
@@ -118,13 +125,39 @@ def download_audio(video_id, output_path, artist="Unknown Artist", title="Unknow
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
         
-        print(json.dumps({
-            "status": "success",
-            "message": "Download complete",
-            "file": output_path
-        }), flush=True)
+        # Check for the resulting file. yt-dlp appends extension.
+        # We need to find what it saved as.
+        # Since we don't know the exact extension yt-dlp picked (it could be webm, m4a, mp4),
+        # we check the likely candidates.
         
-        return True
+        base_path = output_path
+        final_path = None
+        
+        for ext in ['m4a', 'webm', 'mp4', 'mp3', 'ogg', 'wav']:
+            path_check = f"{base_path}.{ext}"
+            if os.path.exists(path_check):
+                final_path = path_check
+                break
+        
+        if final_path:
+            # If it's mp4, rename to m4a for better compatibility appearance
+            if final_path.endswith('.mp4'):
+                new_path = f"{base_path}.m4a"
+                os.rename(final_path, new_path)
+                final_path = new_path
+                
+            print(json.dumps({
+                "status": "success",
+                "message": "Download complete",
+                "file": final_path
+            }), flush=True)
+            return True
+        else:
+             print(json.dumps({
+                "status": "error",
+                "message": "Download finished but file not found."
+            }), flush=True)
+             return False
         
     except Exception as e:
         print(json.dumps({

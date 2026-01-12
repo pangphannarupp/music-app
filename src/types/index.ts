@@ -31,6 +31,8 @@ export interface Song {
     thumbnail: string;
     duration?: string;
     audioUrl?: string;
+    isLocal?: boolean;
+    localPath?: string;
 }
 
 export interface Playlist {

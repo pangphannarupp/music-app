@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useEffect, type ReactNode } from 'react';
 import type { Song, Playlist } from '../types';
 import { getRelatedVideos } from '../api/youtube';
+import { getSkipSegments, type SponsorBlockSegment } from '../api/sponsorBlock';
 
 interface PlaylistFolder {
     id: string;
@@ -69,6 +70,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     const [history, setHistory] = useState<Song[]>([]);
     const [isFullScreen, setIsFullScreen] = useState(false);
     const [relatedSongs, setRelatedSongs] = useState<Song[]>([]);
+    const [skipSegments, setSkipSegments] = useState<SponsorBlockSegment[]>([]);
 
     // Persistent Playback History
     const [playbackHistory, setPlaybackHistory] = useState<Song[]>(() => {
@@ -140,6 +142,31 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         setSeekRequest(time);
         setCurrentTime(time);
     };
+
+    // SponsorBlock Effect
+    useEffect(() => {
+        if (currentSong?.id && !currentSong.isLocal) {
+            setSkipSegments([]); // Reset
+            getSkipSegments(currentSong.id).then(setSkipSegments);
+        } else {
+            setSkipSegments([]);
+        }
+    }, [currentSong?.id, currentSong?.isLocal]);
+
+    // Check for skips on time update
+    useEffect(() => {
+        if (skipSegments.length > 0 && isPlaying) {
+            const currentSegment = skipSegments.find(
+                s => currentTime >= s.segment[0] && currentTime < s.segment[1]
+            );
+
+            if (currentSegment) {
+                console.log(`[SponsorBlock] Skipping ${currentSegment.category} from ${currentSegment.segment[0]} to ${currentSegment.segment[1]}`);
+                seek(currentSegment.segment[1]);
+                // Optional: Show toast or visual indicator
+            }
+        }
+    }, [currentTime, skipSegments, isPlaying]);
 
     const toggleFullScreen = () => setIsFullScreen(prev => !prev);
 

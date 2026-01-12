@@ -25,12 +25,12 @@ function createWindow() {
     const isDev = process.env.NODE_ENV === 'development';
 
     if (isDev) {
-        mainWindow.loadURL('http://localhost:5173');
+        mainWindow.loadURL('http://localhost:5174');
         mainWindow.webContents.openDevTools();
     } else {
         console.log('Loading production app...');
         // alert(path.join(__dirname, '../dist/index.html'));
-        mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+        mainWindow.loadFile(path.join(__dirname, '../dist/content/index.html'));
     }
 
     mainWindow.on('closed', () => {
@@ -42,8 +42,9 @@ function createWindow() {
 ipcMain.handle('download-file', async (event, videoId, defaultFilename, artist, title) => {
     try {
         // Show save dialog
+        const defaultPath = path.join(app.getPath('music'), defaultFilename);
         const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-            defaultPath: defaultFilename,
+            defaultPath: defaultPath,
             filters: [
                 { name: 'Audio Files', extensions: ['mp3'] },
                 { name: 'All Files', extensions: ['*'] }
@@ -264,6 +265,42 @@ ipcMain.handle('search-videos', async (event, query) => {
                 }
             });
         });
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
+});
+
+// List downloaded files
+// List downloaded files
+ipcMain.handle('list-downloads', async () => {
+    try {
+        const pathsToScan = [
+            app.getPath('music'),
+            app.getPath('downloads')
+        ];
+
+        const fs = require('fs/promises');
+        let allFiles = [];
+
+        for (const dirPath of pathsToScan) {
+            try {
+                const files = await fs.readdir(dirPath);
+                const audioExtensions = ['.mp3', '.webm', '.m4a', '.wav', '.ogg', '.aac'];
+                const audioFiles = files
+                    .filter(f => audioExtensions.some(ext => f.toLowerCase().endsWith(ext)))
+                    .map(f => ({
+                        name: f,
+                        path: path.join(dirPath, f)
+                    }));
+                allFiles = [...allFiles, ...audioFiles];
+            } catch (e) {
+                console.warn(`Failed to read directory: ${dirPath}`, e);
+            }
+        }
+
+        // Remove duplicates (by name or path? let's keep all valid paths)
+        return { success: true, files: allFiles };
+
     } catch (error) {
         return { success: false, error: error.message };
     }

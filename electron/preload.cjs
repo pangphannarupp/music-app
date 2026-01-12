@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('electron', {
     fetchUrl: (url) => ipcRenderer.invoke('fetch-url', url),
     getAudioUrl: (videoId) => ipcRenderer.invoke('get-audio-url', videoId),
     searchVideos: (query) => ipcRenderer.invoke('search-videos', query),
+    listDownloads: () => ipcRenderer.invoke('list-downloads'),
     isElectron: true
 });

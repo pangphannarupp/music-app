@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { usePlayer } from '../context/PlayerContext';
 import { useLanguage } from '../context/LanguageContext';
-import { Music, Play, X, Trash2, Folder as FolderIcon, ChevronRight, ChevronDown, FolderPlus, ListPlus } from 'lucide-react';
+import { Music, Play, X, Trash2, Folder as FolderIcon, ChevronRight, ChevronDown, FolderPlus, ListPlus, User } from 'lucide-react';
 import type { Song, Playlist } from '../types';
 import { InputModal } from './InputModal';
+import { DownloadsView } from './DownloadsView';
 
 interface LibraryViewProps {
     isOpen: boolean;
@@ -23,9 +24,21 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ isOpen, onClose, varia
         createFolder
     } = usePlayer();
 
-    const [activeTab, setActiveTab] = useState<'favorites' | 'playlists'>('favorites');
+    const [activeTab, setActiveTab] = useState<'favorites' | 'playlists' | 'downloads' | 'artists'>('favorites');
     const [selectedPlaylist, setSelectedPlaylist] = useState<Playlist | null>(null);
+    const [selectedArtist, setSelectedArtist] = useState<string | null>(null);
     const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+    // Group Favorites by Artist
+    const artists = useMemo(() => {
+        const groups: Record<string, Song[]> = {};
+        favorites.forEach(song => {
+            const artist = song.artist || 'Unknown Artist';
+            if (!groups[artist]) groups[artist] = [];
+            groups[artist].push(song);
+        });
+        return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+    }, [favorites]);
 
     // Input Modal State
     const [isInputModalOpen, setIsInputModalOpen] = useState(false);
@@ -58,7 +71,6 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ isOpen, onClose, varia
     };
 
     // If drawer mode and not open, return null.
-    // If page mode, we typically control visibility via parent routing/rendering, but can check isOpen too.
     if (!isOpen) return null;
 
     const renderSongList = (songs: Song[], isRemovable = false, removeAction?: (id: string) => void) => (
@@ -75,7 +87,11 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ isOpen, onClose, varia
                         onClick={() => playSong(song)}
                     >
                         <div className="relative w-12 h-12 bg-zinc-800 rounded overflow-hidden shrink-0">
-                            <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
+                            {song.thumbnail ? (
+                                <img src={song.thumbnail} alt={song.title} className="w-full h-full object-cover" />
+                            ) : (
+                                <Music className="w-6 h-6 text-zinc-600 m-auto" />
+                            )}
                             <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                                 <Play className="w-5 h-5 text-white fill-current" />
                             </div>
@@ -104,7 +120,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ isOpen, onClose, varia
     // Dynamic Classes based on variant
     const containerClasses = variant === 'drawer'
         ? "fixed inset-y-0 right-0 z-50 w-full max-w-md bg-zinc-900 border-l border-white/10 shadow-2xl flex flex-col transform transition-transform duration-300"
-        : "w-full flex flex-col min-h-full"; // Page mode: explicit height/width handling handled by parent layout mostly
+        : "w-full flex flex-col min-h-full";
 
     const headerClasses = variant === 'drawer'
         ? "flex items-center justify-between p-6 border-b border-white/10 shrink-0"
@@ -131,29 +147,43 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ isOpen, onClose, varia
             </div>
 
             {/* Navigation */}
-            {selectedPlaylist ? (
+            {selectedPlaylist || selectedArtist ? (
                 <div className={`flex items-center gap-4 px-0 py-4 border-b ${navBorderClass} ${variant === 'drawer' ? 'px-6' : ''}`}>
                     <button
-                        onClick={() => setSelectedPlaylist(null)}
+                        onClick={() => { setSelectedPlaylist(null); setSelectedArtist(null); }}
                         className="text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-sm"
                     >
                         ← {t.back}
                     </button>
-                    <h3 className="text-zinc-900 dark:text-white font-bold truncate flex-1">{selectedPlaylist.name}</h3>
+                    <h3 className="text-zinc-900 dark:text-white font-bold truncate flex-1">
+                        {selectedPlaylist ? selectedPlaylist.name : selectedArtist}
+                    </h3>
                 </div>
             ) : (
-                <div className={`flex border-b ${navBorderClass} ${variant === 'drawer' ? 'px-6' : ''}`}>
+                <div className={`flex border-b ${navBorderClass} ${variant === 'drawer' ? 'px-6' : ''} overflow-x-auto hide-scrollbar`}>
                     <button
                         onClick={() => setActiveTab('favorites')}
-                        className={`py-4 px-4 font-medium text-sm border-b-2 transition ${activeTab === 'favorites' ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-white'}`}
+                        className={`py-4 px-4 font-medium text-sm border-b-2 transition whitespace-nowrap ${activeTab === 'favorites' ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-white'}`}
                     >
                         {t.favorites}
                     </button>
                     <button
                         onClick={() => setActiveTab('playlists')}
-                        className={`py-4 px-4 font-medium text-sm border-b-2 transition ${activeTab === 'playlists' ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-white'}`}
+                        className={`py-4 px-4 font-medium text-sm border-b-2 transition whitespace-nowrap ${activeTab === 'playlists' ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-white'}`}
                     >
                         {t.playlistsTab}
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('artists')}
+                        className={`py-4 px-4 font-medium text-sm border-b-2 transition whitespace-nowrap ${activeTab === 'artists' ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-white'}`}
+                    >
+                        Artists
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('downloads')}
+                        className={`py-4 px-4 font-medium text-sm border-b-2 transition whitespace-nowrap ${activeTab === 'downloads' ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-900 dark:hover:text-white'}`}
+                    >
+                        {t.downloads || 'Downloads'}
                     </button>
                 </div>
             )}
@@ -178,8 +208,43 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ isOpen, onClose, varia
                         </div>
                         {renderSongList(selectedPlaylist.songs, true, () => { })}
                     </div>
+                ) : selectedArtist ? (
+                    <div>
+                        <div className="flex gap-4 mb-6">
+                            <div className="w-32 h-32 bg-zinc-200 dark:bg-zinc-800 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-lg">
+                                <User className="w-12 h-12 text-zinc-400 dark:text-zinc-600" />
+                            </div>
+                            <div className="flex flex-col justify-end pb-2">
+                                <p className="text-zinc-500 dark:text-zinc-400 text-xs uppercase font-bold tracking-widest mb-1">Artist</p>
+                                <h1 className="text-zinc-900 dark:text-white text-2xl font-bold mb-2">{selectedArtist}</h1>
+                                <p className="text-zinc-500 text-sm">{artists.find(([name]) => name === selectedArtist)?.[1].length || 0} {t.songs}</p>
+                            </div>
+                        </div>
+                        {renderSongList(artists.find(([name]) => name === selectedArtist)?.[1] || [])}
+                    </div>
                 ) : activeTab === 'favorites' ? (
                     renderSongList(favorites)
+                ) : activeTab === 'artists' ? (
+                    <div className="flex flex-col gap-2">
+                        {artists.map(([artistName, artistSongs]) => (
+                            <div
+                                key={artistName}
+                                className="group flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition cursor-pointer"
+                                onClick={() => setSelectedArtist(artistName)}
+                            >
+                                <div className="w-12 h-12 bg-zinc-800 rounded-full flex items-center justify-center shrink-0 shadow-md">
+                                    <User className="w-5 h-5 text-zinc-400" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-zinc-900 dark:text-white font-medium truncate">{artistName}</h4>
+                                    <p className="text-zinc-500 text-xs truncate">{artistSongs.length} {t.songs}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-zinc-600 group-hover:text-white transition" />
+                            </div>
+                        ))}
+                    </div>
+                ) : activeTab === 'downloads' ? (
+                    <DownloadsView />
                 ) : (
                     <div className="flex flex-col gap-2">
                         {/* Creation Actions */}

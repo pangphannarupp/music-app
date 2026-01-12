@@ -40,12 +40,29 @@ export const PlayerControls: React.FC = () => {
 
     // Stream URL state (Desktop Only)
     const [streamUrl, setStreamUrl] = useState<string | null>(null);
+    const [urlSongId, setUrlSongId] = useState<string | null>(null);
     const [isLoadingStream, setIsLoadingStream] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const isFavorite = favorites.some(s => s.id === currentSong?.id);
 
+    // Derived URL to prevent stale playback
+    const activeStreamUrl = (urlSongId === currentSong?.id) ? streamUrl : null;
+
     // --- EFFECT: Load Audio Source ---
+    useEffect(() => {
+        if (!currentSong) return;
+
+        // Cleanup function to ensure audio stops when unmounting or switching
+        return () => {
+            if (isDesktop && audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.removeAttribute('src'); // Explicitly clear src
+            }
+        };
+    }, [isDesktop]); // Only re-run on environment change or unmount
+
+    // Actual Data Loading Effect
     useEffect(() => {
         if (!currentSong) return;
 
@@ -54,6 +71,7 @@ export const PlayerControls: React.FC = () => {
         setDuration(0);
         setGlobalDuration(0);
         setStreamUrl(null);
+        setUrlSongId(null); // Invalidate previous URL immediately
         setError(null);
 
         // 1. DESKTOP: Fetch Stream URL
@@ -62,6 +80,7 @@ export const PlayerControls: React.FC = () => {
             if (currentSong.audioUrl) {
                 // Local file or pre-set URL
                 setStreamUrl(currentSong.audioUrl);
+                setUrlSongId(currentSong.id);
                 setIsLoadingStream(false);
             } else {
                 // Fetch via yt-dlp
@@ -72,6 +91,7 @@ export const PlayerControls: React.FC = () => {
                             if (url) {
                                 console.log('Desktop: Stream fetched:', url);
                                 setStreamUrl(url);
+                                setUrlSongId(currentSong.id);
                             } else {
                                 console.error('Desktop: Failed to fetch stream');
                                 setError('Stream not available locally.');
@@ -101,7 +121,7 @@ export const PlayerControls: React.FC = () => {
     // --- EFFECT: Handle Play/Pause ---
     useEffect(() => {
         // Desktop Audio
-        if (isDesktop && audioRef.current && streamUrl) {
+        if (isDesktop && audioRef.current && activeStreamUrl) {
             if (isPlaying) {
                 audioRef.current.play().catch(e => console.error("Audio Play Err:", e));
             } else {
@@ -116,7 +136,7 @@ export const PlayerControls: React.FC = () => {
                 ytPlayer.pauseVideo();
             }
         }
-    }, [isPlaying, streamUrl, ytPlayer, isDesktop]);
+    }, [isPlaying, activeStreamUrl, ytPlayer, isDesktop]);
 
     // --- EFFECT: Handle Volume ---
     useEffect(() => {
@@ -265,7 +285,7 @@ export const PlayerControls: React.FC = () => {
             {isDesktop ? (
                 <audio
                     ref={audioRef}
-                    src={streamUrl || undefined}
+                    src={activeStreamUrl || undefined}
                     preload="auto"
                     onTimeUpdate={handleAudioTimeUpdate}
                     onLoadedMetadata={() => setIsLoadingStream(false)}
@@ -318,11 +338,17 @@ export const PlayerControls: React.FC = () => {
             <div className="flex items-center justify-between w-full h-full">
                 {/* Song Info */}
                 <div className="flex items-center gap-3 w-full md:w-1/4 overflow-hidden pr-2">
-                    <img
-                        src={currentSong.thumbnail}
-                        alt={currentSong.title}
-                        className="w-12 h-12 md:w-14 md:h-14 rounded-md object-cover shadow-lg shrink-0"
-                    />
+                    {currentSong.thumbnail ? (
+                        <img
+                            src={currentSong.thumbnail}
+                            alt={currentSong.title}
+                            className="w-12 h-12 md:w-14 md:h-14 rounded-md object-cover shadow-lg shrink-0"
+                        />
+                    ) : (
+                        <div className="w-12 h-12 md:w-14 md:h-14 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
+                            <span className="text-xs text-zinc-500">MP3</span>
+                        </div>
+                    )}
                     <div
                         onClick={toggleFullScreen}
                         className="flex-1 flex flex-col justify-center mx-4 min-w-0 cursor-pointer"

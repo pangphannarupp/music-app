@@ -283,7 +283,7 @@ export const getRelatedVideos = async (videoId: string, artistName?: string): Pr
                         part: 'snippet',
                         relatedToVideoId: videoId,
                         type: 'video',
-                        maxResults: 5,
+                        maxResults: 10,
                         key: key,
                     },
                 })
@@ -291,7 +291,7 @@ export const getRelatedVideos = async (videoId: string, artistName?: string): Pr
 
             return response.data.items
                 .filter(item => item.id.videoId !== videoId)
-                .slice(0, 5)
+                .slice(0, 10)
                 .map((item) => ({
                     id: item.id.videoId,
                     title: item.snippet.title,
@@ -307,7 +307,7 @@ export const getRelatedVideos = async (videoId: string, artistName?: string): Pr
                     part: 'snippet',
                     q: searchQuery,
                     type: 'video',
-                    maxResults: 6, // Get 6 to filter out current song
+                    maxResults: 11, // Get 11 to filter out current song
                     key: key,
                 },
             })
@@ -315,7 +315,7 @@ export const getRelatedVideos = async (videoId: string, artistName?: string): Pr
 
         return response.data.items
             .filter(item => item.id.videoId !== videoId) // Exclude current song
-            .slice(0, 5) // Limit to 5 results
+            .slice(0, 10) // Limit to 10 results
             .map((item) => ({
                 id: item.id.videoId,
                 title: item.snippet.title,
@@ -324,7 +324,7 @@ export const getRelatedVideos = async (videoId: string, artistName?: string): Pr
             }));
     } catch (error) {
         console.warn('API Error (All keys tried). Falling back to mock data.');
-        return MOCK_RESULTS.slice(0, 5).map(item => ({
+        return MOCK_RESULTS.slice(0, 10).map(item => ({
             id: item.id.videoId,
             title: `Related: ${item.snippet.title}`,
             artist: item.snippet.channelTitle,
