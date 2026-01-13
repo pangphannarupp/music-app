@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InputModal } from './InputModal';
-import { Home, Heart, Settings, FolderPlus, PlusSquare, Folder, ListMusic, ChevronDown, ChevronRight, Trash2, Clock, Library } from 'lucide-react';
+import { Home, Heart, Settings, FolderPlus, PlusSquare, Folder, ListMusic, ChevronDown, ChevronRight, Trash2, Clock, Library, Radio, Mic } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { usePlayer } from '../context/PlayerContext';
 
@@ -37,6 +37,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) =
     const menuItems = [
         { id: 'home', icon: Home, label: t.home },
         { id: 'library', icon: Library, label: t.library },
+        { id: 'radio', icon: Radio, label: 'Radio' },
+        { id: 'podcasts', icon: Mic, label: 'Podcasts' },
         { id: 'favorites', icon: Heart, label: t.favorites },
         { id: 'history', icon: Clock, label: t.history },
         { id: 'settings', icon: Settings, label: t.settings },

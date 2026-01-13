@@ -324,7 +324,7 @@ export const FullScreenPlayer: React.FC = () => {
                                             const isActive = currentTime >= line.time && (!nextLine || currentTime < nextLine.time);
                                             return (
                                                 <p
-                                                    key={line.time}
+                                                    key={`${line.time}-${index}`}
                                                     className={`mb-6 text-2xl md:text-3xl font-bold transition-all duration-300 ${isActive
                                                         ? 'text-zinc-900 dark:text-white scale-110 origin-center'
                                                         : 'text-zinc-400 dark:text-zinc-600 blur-[1px] hover:blur-0'

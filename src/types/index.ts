@@ -33,6 +33,7 @@ export interface Song {
     audioUrl?: string;
     isLocal?: boolean;
     localPath?: string;
+    isRadio?: boolean;
 }
 
 export interface EqualizerBand {
@@ -54,4 +55,25 @@ export interface Playlist {
     folderId?: string;
     createdAt: number;
     coverImage?: string; // Base64 or URL
+}
+
+export interface Podcast {
+    id: string; // collectionId
+    title: string; // collectionName
+    artist: string; // artistName
+    image: string; // artworkUrl600
+    feedUrl?: string; // feedUrl
+    description?: string;
+    genres?: string[];
+}
+
+export interface Episode {
+    id: string; // guid
+    title: string; // title
+    description: string; // description
+    audioUrl: string; // enclosure url
+    publishedAt: string; // pubDate
+    duration: string; // itunes:duration
+    podcastTitle?: string;
+    podcastImage?: string;
 }

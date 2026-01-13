@@ -74,6 +74,7 @@ interface PlayerContextType {
     setEqBand: (index: number, gain: number) => void;
     currentPreset: string;
     setPreset: (presetId: string) => void;
+
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -97,8 +98,23 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     // Persistent Playback History
     const [playbackHistory, setPlaybackHistory] = useState<Song[]>(() => {
-        const saved = localStorage.getItem('playback_history');
-        return saved ? JSON.parse(saved) : [];
+        try {
+            const saved = localStorage.getItem('playback_history');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                // Sanitize: Detect old Radio stations missing the flag
+                return parsed.map((s: Song) => ({
+                    ...s,
+                    // Heuristic: If ID matches UUID format (long) and not local, assume it's possibly a radio station
+                    // Better: If it was saved before, we rely on standard format.
+                    // Real fix: Just ensure we don't break.
+                    isRadio: s.isRadio || (s.id && s.id.length > 20 && !s.isLocal && !s.duration)
+                }));
+            }
+        } catch (e) {
+            console.error("Failed to load history", e);
+        }
+        return [];
     });
 
     // Volume State (0.0 to 1.0)
@@ -120,10 +136,29 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (savedPreset) setCurrentPreset(savedPreset);
     }, []);
 
+    // Safe LocalStorage Helper
+    const safeSetItem = (key: string, value: string) => {
+        try {
+            localStorage.setItem(key, value);
+        } catch (e: any) {
+            console.error(`Failed to save ${key} to localStorage:`, e);
+            if (e.name === 'QuotaExceededError') {
+                console.warn('LocalStorage quota exceeded. Trimming history to save space.');
+                // Emergency: Clear old history if we can't save
+                try {
+                    const history = JSON.parse(localStorage.getItem('playback_history') || '[]');
+                    if (history.length > 50) {
+                        localStorage.setItem('playback_history', JSON.stringify(history.slice(-50)));
+                    }
+                } catch (err) { }
+            }
+        }
+    };
+
     // Save EQ settings
     useEffect(() => {
-        localStorage.setItem('equalizer_bands', JSON.stringify(eqBands));
-        localStorage.setItem('equalizer_preset', JSON.stringify(currentPreset));
+        safeSetItem('equalizer_bands', JSON.stringify(eqBands));
+        safeSetItem('equalizer_preset', JSON.stringify(currentPreset));
 
         // Update live filters
         filtersRef.current.forEach((filter, index) => {
@@ -219,10 +254,13 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
         const interval = setInterval(() => {
             if (audioRef.current) {
-                setCurrentTime(audioRef.current.currentTime);
-                // Taskbar Progress
-                if (window.electron?.setProgressBar && duration > 0) {
-                    window.electron.setProgressBar(audioRef.current.currentTime / duration);
+                const current = audioRef.current.currentTime;
+                setCurrentTime(current);
+
+                // Taskbar Progress (Only for non-radio/finite duration)
+                // Radio streams might return Infinity or very large numbers for duration, so we check carefully.
+                if (window.electron?.setProgressBar && duration > 0 && duration !== Infinity) {
+                    window.electron.setProgressBar(current / duration);
                 }
             }
         }, 1000);
@@ -255,10 +293,14 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     });
 
 
-    useEffect(() => { localStorage.setItem('favorites', JSON.stringify(favorites)); }, [favorites]);
-    useEffect(() => { localStorage.setItem('playlists', JSON.stringify(playlists)); }, [playlists]);
-    useEffect(() => { localStorage.setItem('playlist_folders', JSON.stringify(folders)); }, [folders]);
-    useEffect(() => { localStorage.setItem('playback_history', JSON.stringify(playbackHistory)); }, [playbackHistory]);
+    useEffect(() => { safeSetItem('favorites', JSON.stringify(favorites)); }, [favorites]);
+    useEffect(() => { safeSetItem('playlists', JSON.stringify(playlists)); }, [playlists]);
+    useEffect(() => { safeSetItem('playlist_folders', JSON.stringify(folders)); }, [folders]);
+    useEffect(() => {
+        // Limit history to 100 items on disk
+        const limitedHistory = playbackHistory.slice(0, 100);
+        safeSetItem('playback_history', JSON.stringify(limitedHistory));
+    }, [playbackHistory]);
 
     // Update history when song changes
     useEffect(() => {
@@ -267,7 +309,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 // Remove existing entry of this song to move it to top
                 const filtered = prev.filter(s => s.id !== currentSong.id);
                 // Add to front, limit to 100
-                return [currentSong, ...filtered].slice(0, 100);
+                const newHistory = [currentSong, ...filtered];
+                return newHistory.slice(0, 100);
             });
         }
     }, [currentSong]);
@@ -292,7 +335,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         if (currentSong?.id === song.id) {
             togglePlay();
         } else {
-            if (currentSong) setHistory(prev => [...prev, currentSong]);
+            if (currentSong) {
+                setHistory(prev => {
+                    const newHistory = [...prev, currentSong];
+                    return newHistory.slice(-100); // Keep last 100
+                });
+            }
             setCurrentSong(song);
             setIsPlaying(true);
         }
@@ -307,13 +355,16 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     // SponsorBlock Effect
     useEffect(() => {
-        if (currentSong?.id && !currentSong.isLocal) {
+        // Only fetch for YouTube videos (length 11) - Skip for Radio/Podcasts/Local
+        const isYouTubeId = currentSong?.id && currentSong.id.length === 11 && !currentSong.isLocal && !currentSong.isRadio;
+
+        if (isYouTubeId) {
             setSkipSegments([]); // Reset
             getSkipSegments(currentSong.id).then(setSkipSegments);
         } else {
             setSkipSegments([]);
         }
-    }, [currentSong?.id, currentSong?.isLocal]);
+    }, [currentSong?.id, currentSong?.isLocal, currentSong?.isRadio]);
 
     // Check for skips on time update
     useEffect(() => {
@@ -479,7 +530,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             window.electron.updateMiniPlayer({
                 isPlaying,
                 currentTime,
-                duration,
+                duration: duration === Infinity ? 0 : duration,
                 themeColor: color,
                 themeMode: mode,
                 currentSong: currentSong ? {
@@ -583,6 +634,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             });
         }
     }, [currentSong, isPlaying]);
+
+
 
     return (
         <PlayerContext.Provider value={{

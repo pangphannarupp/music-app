@@ -28,6 +28,9 @@ export const PlayerControls: React.FC = () => {
     // Environment Check
     const isDesktop = !!window.electron;
 
+    // Check if we should use native audio (Desktop OR Radio)
+    const useNativeAudio = isDesktop || currentSong?.isRadio;
+
     // References
     const audioRef = useRef<HTMLAudioElement>(null);
     const [ytPlayer, setYtPlayer] = useState<YouTubePlayer | null>(null);
@@ -38,7 +41,7 @@ export const PlayerControls: React.FC = () => {
     const [duration, setDuration] = useState(0);
     const [isSeeking, setIsSeeking] = useState(false);
 
-    // Stream URL state (Desktop Only)
+    // Stream URL state
     const [streamUrl, setStreamUrl] = useState<string | null>(null);
     const [urlSongId, setUrlSongId] = useState<string | null>(null);
     const [isLoadingStream, setIsLoadingStream] = useState(false);
@@ -55,12 +58,12 @@ export const PlayerControls: React.FC = () => {
 
         // Cleanup function to ensure audio stops when unmounting or switching
         return () => {
-            if (isDesktop && audioRef.current) {
+            if (useNativeAudio && audioRef.current) {
                 audioRef.current.pause();
                 audioRef.current.removeAttribute('src'); // Explicitly clear src
             }
         };
-    }, [isDesktop]); // Only re-run on environment change or unmount
+    }, [useNativeAudio]); // Only re-run on environment change or unmount
 
     // Actual Data Loading Effect
     useEffect(() => {
@@ -74,16 +77,24 @@ export const PlayerControls: React.FC = () => {
         setUrlSongId(null); // Invalidate previous URL immediately
         setError(null);
 
-        // 1. DESKTOP: Fetch Stream URL
-        if (isDesktop) {
+        // 1. NATIVE AUDIO: Fetch Stream URL (Desktop or Radio)
+        if (useNativeAudio) {
             setIsLoadingStream(true);
-            if (currentSong.audioUrl) {
+
+            // For Radio, audioUrl is directly available
+            if (currentSong.isRadio && currentSong.audioUrl) {
+                setStreamUrl(currentSong.audioUrl);
+                setUrlSongId(currentSong.id);
+                setIsLoadingStream(false);
+            }
+            // For Desktop Local/YouTube
+            else if (currentSong.audioUrl) {
                 // Local file or pre-set URL
                 setStreamUrl(currentSong.audioUrl);
                 setUrlSongId(currentSong.id);
                 setIsLoadingStream(false);
-            } else {
-                // Fetch via yt-dlp
+            } else if (isDesktop) {
+                // Fetch via yt-dlp if on desktop and no URL
                 const fetchStream = async () => {
                     try {
                         const url = await getStreamUrl(currentSong.id);
@@ -107,21 +118,24 @@ export const PlayerControls: React.FC = () => {
                     }
                 };
                 fetchStream();
+            } else {
+                // Should technically not happen if logic is correct
+                setIsLoadingStream(false);
             }
         }
-        // 2. WEB: YouTube Embed handles loading internally via videoId
+        // 2. WEB YOUTUBE: YouTube Embed handles loading internally via videoId
         else {
             setIsLoadingStream(true); // Will be cleared when player is ready/starts
             // Verify if player is ready, otherwise it will load automatically
         }
 
         return () => { isMounted = false; };
-    }, [currentSong, isDesktop]); // Removed setGlobalDuration from dependency to avoid loop
+    }, [currentSong, useNativeAudio, isDesktop]); // Removed setGlobalDuration from dependency to avoid loop
 
     // --- EFFECT: Handle Play/Pause ---
     useEffect(() => {
-        // Desktop Audio
-        if (isDesktop && audioRef.current && activeStreamUrl) {
+        // Native Audio
+        if (useNativeAudio && audioRef.current && activeStreamUrl) {
             if (isPlaying) {
                 audioRef.current.play().catch(e => console.error("Audio Play Err:", e));
             } else {
@@ -129,24 +143,24 @@ export const PlayerControls: React.FC = () => {
             }
         }
         // Web YouTube
-        else if (!isDesktop && ytPlayer) {
+        else if (!useNativeAudio && ytPlayer) {
             if (isPlaying) {
                 ytPlayer.playVideo();
             } else {
                 ytPlayer.pauseVideo();
             }
         }
-    }, [isPlaying, activeStreamUrl, ytPlayer, isDesktop]);
+    }, [isPlaying, activeStreamUrl, ytPlayer, useNativeAudio]);
 
     // --- EFFECT: Handle Volume ---
     useEffect(() => {
-        // Desktop
-        if (isDesktop && audioRef.current) {
+        // Native Audio
+        if (useNativeAudio && audioRef.current) {
             audioRef.current.volume = muted ? 0 : volume;
             audioRef.current.muted = muted;
         }
-        // Web
-        else if (!isDesktop && ytPlayer) {
+        // Web YouTube
+        else if (!useNativeAudio && ytPlayer) {
             if (muted) {
                 ytPlayer.mute();
             } else {
@@ -154,22 +168,25 @@ export const PlayerControls: React.FC = () => {
                 ytPlayer.setVolume(volume * 100);
             }
         }
-    }, [volume, muted, isDesktop, ytPlayer]);
+    }, [volume, muted, useNativeAudio, ytPlayer]);
 
     // --- EFFECT: Handle Seek Request ---
     useEffect(() => {
         if (seekRequest !== null) {
-            // Desktop
-            if (isDesktop && audioRef.current && duration > 0) {
-                audioRef.current.currentTime = seekRequest;
+            // Native Audio
+            if (useNativeAudio && audioRef.current) {
+                // Check duration > 0 unless it's radio (infinite)
+                if (duration > 0 || currentSong?.isRadio) {
+                    audioRef.current.currentTime = seekRequest;
+                }
             }
-            // Web
-            else if (!isDesktop && ytPlayer && duration > 0) {
+            // Web YouTube
+            else if (!useNativeAudio && ytPlayer && duration > 0) {
                 ytPlayer.seekTo(seekRequest, true);
             }
             setSeekRequest(null);
         }
-    }, [seekRequest, duration, isDesktop, ytPlayer, setSeekRequest]);
+    }, [seekRequest, duration, useNativeAudio, ytPlayer, setSeekRequest, currentSong]);
 
     // --- HANDLERS: Desktop Audio ---
     const handleAudioTimeUpdate = () => {
@@ -188,7 +205,21 @@ export const PlayerControls: React.FC = () => {
 
     const handleAudioError = (e: any) => {
         console.error("Audio Error:", e);
-        setError('Playback error.');
+
+        // Retry with Proxy for CORS errors (common in Web for Podcasts)
+        if (currentSong?.audioUrl && !audioRef.current?.src.includes('api.allorigins.win')) {
+            // Only retry if we aren't already using the proxy
+            console.warn('Playback failed, retrying with CORS proxy...');
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(currentSong.audioUrl)}`;
+            if (audioRef.current) {
+                // We must update the SRC and play again
+                audioRef.current.src = proxyUrl;
+                audioRef.current.play().catch(err => console.error("Proxy Play Err:", err));
+                return; // Prevent setting general error state yet
+            }
+        }
+
+        setError('Playback error. Stream may be offline or blocked.');
     };
 
     // --- HANDLERS: Web YouTube ---
@@ -222,7 +253,7 @@ export const PlayerControls: React.FC = () => {
 
     // Poll for progress (YouTube API doesn't have onTimeUpdate)
     useEffect(() => {
-        if (isDesktop || !ytPlayer || !isPlaying || isSeeking) return;
+        if (useNativeAudio || !ytPlayer || !isPlaying || isSeeking) return;
 
         const interval = setInterval(() => {
             const curr = ytPlayer.getCurrentTime();
@@ -236,7 +267,7 @@ export const PlayerControls: React.FC = () => {
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isDesktop, ytPlayer, isPlaying, isSeeking, setGlobalDuration, setCurrentTime]);
+    }, [useNativeAudio, ytPlayer, isPlaying, isSeeking, setGlobalDuration, setCurrentTime]);
 
 
     // --- UI HELPERS ---
@@ -249,9 +280,9 @@ export const PlayerControls: React.FC = () => {
         setIsSeeking(false);
         const val = parseFloat(e.currentTarget.value) * duration;
 
-        if (isDesktop && audioRef.current) {
+        if (useNativeAudio && audioRef.current) {
             audioRef.current.currentTime = val;
-        } else if (!isDesktop && ytPlayer) {
+        } else if (!useNativeAudio && ytPlayer) {
             ytPlayer.seekTo(val, true);
         }
     };
@@ -281,8 +312,8 @@ export const PlayerControls: React.FC = () => {
         >
             {/* --- ENGINES --- */}
 
-            {/* 1. Desktop: Native Audio */}
-            {isDesktop ? (
+            {/* 1. Native Audio (Desktop OR Radio) */}
+            {useNativeAudio ? (
                 <audio
                     ref={audioRef}
                     src={activeStreamUrl || undefined}
@@ -369,7 +400,7 @@ export const PlayerControls: React.FC = () => {
                             </p>
                         )}
                         {/* Web Hint */}
-                        {!isDesktop && isLoadingStream && (
+                        {!useNativeAudio && isLoadingStream && (
                             <p className="text-[10px] text-zinc-400 animate-pulse">Loading YouTube Player...</p>
                         )}
                     </div>

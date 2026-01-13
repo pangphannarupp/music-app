@@ -333,3 +333,56 @@ export const getRelatedVideos = async (videoId: string, artistName?: string): Pr
         }));
     }
 };
+
+export const searchPlaylists = async (query: string): Promise<any[]> => {
+    if (API_KEYS.length === 0) return [];
+    try {
+        const response = await fetchWithRotation((key) =>
+            axios.get(`${BASE_URL}/search`, {
+                params: {
+                    part: 'snippet',
+                    maxResults: 20,
+                    q: query,
+                    type: 'playlist',
+                    key: key
+                },
+            })
+        );
+        return response.data.items.map((item: any) => ({
+            id: item.id.playlistId,
+            title: item.snippet.title,
+            artist: item.snippet.channelTitle,
+            image: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
+            description: item.snippet.description
+        }));
+    } catch (error) {
+        console.warn('YouTube Playlist Search failed:', error);
+        return [];
+    }
+};
+
+export const getPlaylistVideos = async (playlistId: string): Promise<Song[]> => {
+    if (API_KEYS.length === 0) return [];
+    try {
+        const response = await fetchWithRotation((key) =>
+            axios.get(`${BASE_URL}/playlistItems`, {
+                params: {
+                    part: 'snippet',
+                    maxResults: 50,
+                    playlistId: playlistId,
+                    key: key
+                },
+            })
+        );
+        return response.data.items.map((item: any) => ({
+            id: item.snippet.resourceId.videoId,
+            title: item.snippet.title,
+            artist: item.snippet.videoOwnerChannelTitle || item.snippet.channelTitle,
+            thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url,
+            // duration: not available in snippet, requires secondary fetch. omit for now.
+        })).filter((s: Song) => s.title !== 'Private video' && s.title !== 'Deleted video');
+    } catch (error) {
+        console.warn('YouTube Playlist Videos failed:', error);
+        return [];
+    }
+};

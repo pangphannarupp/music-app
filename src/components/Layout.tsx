@@ -12,6 +12,8 @@ const HomeView = React.lazy(() => import('./HomeView').then(module => ({ default
 const FavoritesView = React.lazy(() => import('./FavoritesView').then(module => ({ default: module.FavoritesView })));
 const SettingsView = React.lazy(() => import('./SettingsView').then(module => ({ default: module.SettingsView })));
 const LibraryView = React.lazy(() => import('./LibraryView').then(module => ({ default: module.LibraryView })));
+const RadioBrowser = React.lazy(() => import('./RadioBrowser').then(module => ({ default: module.RadioBrowser })));
+const PodcastBrowser = React.lazy(() => import('./PodcastBrowser').then(module => ({ default: module.PodcastBrowser })));
 const PlaylistView = React.lazy(() => import('./PlaylistView').then(module => ({ default: module.PlaylistView })));
 const ArtistView = React.lazy(() => import('./ArtistView').then(module => ({ default: module.ArtistView })));
 const HistoryView = React.lazy(() => import('./HistoryView').then(module => ({ default: module.HistoryView })));
@@ -113,6 +115,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         switch (currentView) {
             case 'home': return <HomeView />;
             case 'favorites': return <FavoritesView />;
+            case 'radio': return <RadioBrowser />;
+            case 'podcasts': return <PodcastBrowser />;
             case 'library': return <LibraryView isOpen={true} onClose={() => { }} variant="page" />;
             case 'history': return <HistoryView />;
             case 'settings': return <SettingsView />;
