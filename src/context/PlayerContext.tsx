@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useRef, useEffect, type Rea
 import type { Song, Playlist } from '../types';
 import { getRelatedVideos } from '../api/youtube';
 import { getSkipSegments, type SponsorBlockSegment } from '../api/sponsorBlock';
+import { useTheme } from './ThemeContext';
 
 interface PlaylistFolder {
     id: string;
@@ -80,6 +81,7 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Player Core Logic
     const [currentSong, setCurrentSong] = useState<Song | null>(null);
+    const { mode, color } = useTheme();
     // ...
 
     const [isPlaying, setIsPlaying] = useState(false);
@@ -478,6 +480,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 isPlaying,
                 currentTime,
                 duration,
+                themeColor: color,
+                themeMode: mode,
                 currentSong: currentSong ? {
                     title: currentSong.title,
                     artist: currentSong.artist,
@@ -485,22 +489,25 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
                 } : null
             });
         }
-    }, [isPlaying, currentSong, currentTime, duration]);
+    }, [isPlaying, currentSong, currentTime, duration, color, mode]);
 
     // Init Listener: Handle request for state (use ref to access current state without re-binding)
-    const stateRef = useRef({ isPlaying, currentSong, currentTime, duration });
+    const stateRef = useRef({ isPlaying, currentSong, currentTime, duration, mode, color });
     useEffect(() => {
-        stateRef.current = { isPlaying, currentSong, currentTime, duration };
-    }, [isPlaying, currentSong, currentTime, duration]);
+        stateRef.current = { isPlaying, currentSong, currentTime, duration, mode, color };
+    }, [isPlaying, currentSong, currentTime, duration, mode, color]);
 
     useEffect(() => {
         if (window.electron?.onGetPlayerState) {
             window.electron.onGetPlayerState(() => {
-                const { isPlaying, currentSong: song, currentTime, duration } = stateRef.current;
+                const { isPlaying, currentSong: song, currentTime, duration, mode: themeMode, color: themeColor } = stateRef.current;
+
                 window.electron?.updateMiniPlayer({
                     isPlaying,
                     currentTime,
                     duration,
+                    themeColor,
+                    themeMode,
                     currentSong: song ? {
                         title: song.title,
                         artist: song.artist,

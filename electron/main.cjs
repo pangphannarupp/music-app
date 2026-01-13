@@ -70,6 +70,10 @@ function createMainWindow(contentPath) {
 
     mainWindow.on('closed', () => {
         mainWindow = null;
+        if (miniPlayerWindow) {
+            miniPlayerWindow.close();
+            miniPlayerWindow = null;
+        }
     });
 }
 
@@ -631,6 +635,10 @@ ipcMain.handle('list-downloads', async () => {
 });
 
 app.on('window-all-closed', () => {
+    if (miniPlayerWindow) {
+        miniPlayerWindow.close();
+        miniPlayerWindow = null;
+    }
     if (process.platform !== 'darwin') {
         app.quit();
     }
@@ -662,6 +670,10 @@ function registerGlobalShortcuts() {
 
 app.on('will-quit', () => {
     globalShortcut.unregisterAll();
+    if (miniPlayerWindow) {
+        miniPlayerWindow.close();
+        miniPlayerWindow = null;
+    }
 });
 // Discord Rich Presence
 const DiscordRPC = require('discord-rpc');

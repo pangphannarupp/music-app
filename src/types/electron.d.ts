@@ -31,6 +31,8 @@ export interface ElectronAPI {
         currentSong: { title: string; artist: string; thumbnail: string } | null;
         currentTime: number;
         duration: number;
+        themeColor: string;
+        themeMode: string;
     }) => void;
     sendMiniPlayerAction: (action: 'play-pause' | 'next' | 'prev') => void;
     initMiniPlayer: () => void;
