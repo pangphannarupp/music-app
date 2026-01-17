@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Trash2, Info, Github, Moon, Sun, Globe, Palette, Monitor, Download, Upload } from 'lucide-react';
+import { Trash2, Info, Github, Moon, Sun, Globe, Palette, Monitor, Download, Upload, ListMusic, Clock, Heart, Menu } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ConfirmModal } from './ConfirmModal';
 import { exportData, importData } from '../utils/dataHandler';
 
-export const SettingsView: React.FC = () => {
+interface SettingsViewProps {
+    onViewChange?: (view: string) => void;
+}
+
+export const SettingsView: React.FC<SettingsViewProps> = ({ onViewChange }) => {
     const { mode, setMode, color, setColor, predefinedColors } = useTheme();
     const { language, setLanguage, t } = useLanguage();
     const [showConfirm, setShowConfirm] = useState(false);
@@ -45,6 +49,61 @@ export const SettingsView: React.FC = () => {
             <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2 py-2 leading-relaxed">{t.settings}</h2>
 
             <div className="space-y-6">
+                {/* Navigation Grid - Mobile Only */}
+                <div className="md:hidden mb-8">
+                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                        <Menu className="w-6 h-6" />
+                        {t.menu}
+                    </h2>
+                    <div className="grid grid-cols-4 gap-4">
+
+                        {/* Library */}
+                        <button
+                            onClick={() => onViewChange?.('library')}
+                            className="flex flex-col items-center gap-2 group"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/20 transition-transform group-active:scale-95 text-white">
+                                <ListMusic className="w-7 h-7" />
+                            </div>
+                            <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.library}</span>
+                        </button>
+
+                        {/* History */}
+                        <button
+                            onClick={() => onViewChange?.('history')}
+                            className="flex flex-col items-center gap-2 group"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20 transition-transform group-active:scale-95 text-white">
+                                <Clock className="w-7 h-7" />
+                            </div>
+                            <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.history}</span>
+                        </button>
+
+                        {/* Downloads */}
+                        <button
+                            onClick={() => onViewChange?.('downloads')}
+                            className="flex flex-col items-center gap-2 group"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-transform group-active:scale-95 text-white">
+                                <Download className="w-7 h-7" />
+                            </div>
+                            <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.downloads || 'Downloads'}</span>
+                        </button>
+
+                        {/* Favorites */}
+                        <button
+                            onClick={() => onViewChange?.('favorites')}
+                            className="flex flex-col items-center gap-2 group"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg shadow-orange-500/20 transition-transform group-active:scale-95 text-white">
+                                <Heart className="w-7 h-7" />
+                            </div>
+                            <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.favorites}</span>
+                        </button>
+
+                    </div>
+                </div>
+
                 {/* Appearance Section */}
                 <div className="bg-white dark:bg-zinc-800/50 rounded-xl p-6 border border-zinc-200 dark:border-white/5 shadow-sm">
                     <h3 className="text-lg font-semibold text-zinc-900 dark:text-white mb-6 flex items-center gap-2">

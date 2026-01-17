@@ -1,4 +1,4 @@
-import { Home, Heart, Settings, ListMusic, Clock } from 'lucide-react';
+import { Home, Heart, Settings, Radio, Mic } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 interface BottomNavProps {
@@ -11,9 +11,9 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onViewChange 
 
     const menuItems = [
         { id: 'home', icon: Home, label: t.home, canFill: true },
+        { id: 'radio', icon: Radio, label: 'Radio', canFill: true },
+        { id: 'podcasts', icon: Mic, label: 'Podcasts', canFill: true },
         { id: 'favorites', icon: Heart, label: t.favorites, canFill: true },
-        { id: 'history', icon: Clock, label: t.history, canFill: false },
-        { id: 'library', icon: ListMusic, label: t.library, canFill: true },
         { id: 'settings', icon: Settings, label: t.settings, canFill: false },
     ] as const;
 

@@ -29,3 +29,21 @@ export const addToSearchHistory = (query: string) => {
         console.warn('Failed to save search history:', e);
     }
 };
+
+export const removeFromSearchHistory = (query: string) => {
+    const currentHistory = getSearchHistory();
+    const newHistory = currentHistory.filter(item => item !== query);
+    try {
+        localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
+    } catch (e) {
+        console.warn('Failed to update search history:', e);
+    }
+};
+
+export const clearSearchHistory = () => {
+    try {
+        localStorage.removeItem(SEARCH_HISTORY_KEY);
+    } catch (e) {
+        console.warn('Failed to clear search history:', e);
+    }
+};

@@ -78,6 +78,19 @@ interface Translations {
     exportData: string;
     importData: string;
     importConfirm: string;
+    radio: string;
+    radioSubtitle: string;
+    top50: string;
+    countries: string;
+    searchStations: string;
+    backToCountries: string;
+    noStations: string;
+    podcasts: string;
+    khmer: string;
+    international: string;
+    searchPodcasts: string;
+    backToPodcasts: string;
+    episodes: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -156,7 +169,20 @@ const translations: Record<Language, Translations> = {
         dataManagement: 'Data Management',
         exportData: 'Export Backup',
         importData: 'Import Backup',
-        importConfirm: 'This will overwrite your current data. Continue?'
+        importConfirm: 'This will overwrite your current data. Continue?',
+        radio: 'Radio',
+        radioSubtitle: 'Browse and listen to thousands of radio stations worldwide.',
+        top50: 'Top 50',
+        countries: 'Countries',
+        searchStations: 'Search stations...',
+        backToCountries: 'Back to Countries',
+        noStations: 'No stations found.',
+        podcasts: 'Podcasts',
+        khmer: 'Khmer',
+        international: 'International',
+        searchPodcasts: 'Search podcasts...',
+        backToPodcasts: 'Back to Podcasts',
+        episodes: 'Episodes'
     },
     km: {
         home: 'ទំព័រដើម',
@@ -233,7 +259,20 @@ const translations: Record<Language, Translations> = {
         dataManagement: 'ការគ្រប់គ្រងទិន្នន័យ',
         exportData: 'នាំចេញទិន្នន័យ',
         importData: 'នាំចូលទិន្នន័យ',
-        importConfirm: 'សកម្មភាពនេះនឹងលុបនិងជំនួសទិន្នន័យបច្ចុប្បន្នរបស់អ្នក។ បន្តដែរឬទេ?'
+        importConfirm: 'សកម្មភាពនេះនឹងលុបនិងជំនួសទិន្នន័យបច្ចុប្បន្នរបស់អ្នក។ បន្តដែរឬទេ?',
+        radio: 'វិទ្យុ',
+        radioSubtitle: 'ស្វែងរកនិងស្តាប់ស្ថានីយវិទ្យុរាប់ពាន់ជុំវិញពិភពលោក',
+        top50: 'ពេញនិយម ៥០',
+        countries: 'ប្រទេស',
+        searchStations: 'ស្វែងរកស្ថានីយ...',
+        backToCountries: 'ត្រឡប់ទៅប្រទេសវិញ',
+        noStations: 'រកមិនឃើញស្ថានីយទេ',
+        podcasts: 'ផតខាស',
+        khmer: 'ខ្មែរ',
+        international: 'អន្តរជាតិ',
+        searchPodcasts: 'ស្វែងរកផតខាស...',
+        backToPodcasts: 'ត្រឡប់ទៅផតខាសវិញ',
+        episodes: 'ភាគ'
     }
 };
 

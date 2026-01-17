@@ -19,6 +19,7 @@ export const HomeView: React.FC = () => {
     const { playSong, playbackHistory } = usePlayer();
     const { t, language } = useLanguage();
     const observerTarget = useRef<HTMLDivElement>(null);
+    const resultsRef = useRef<HTMLDivElement>(null);
 
     // Initial search and New Songs
     useEffect(() => {
@@ -93,6 +94,12 @@ export const HomeView: React.FC = () => {
     const handleSearch = async (query: string) => {
         setIsLoading(true);
         setCurrentQuery(query);
+
+        // Auto-scroll to results
+        setTimeout(() => {
+            resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+
         const { songs: newSongs, nextPageToken: token } = await searchVideos(query);
         setSongs(newSongs);
         setNextPageToken(token);
@@ -173,7 +180,7 @@ export const HomeView: React.FC = () => {
 
             <HorizontalArtistList onSelect={handleArtistSelect} selectedArtist={selectedArtist} />
 
-            <div className="w-full mt-4 px-2">
+            <div className="w-full mt-4 px-2" ref={resultsRef}>
                 <h3 className="text-xl font-semibold text-zinc-900 dark:text-white mb-6 pl-3 border-l-4 border-primary">
                     {isLoading && songs.length === 0 ? t.searching : t.results}
                 </h3>
@@ -195,4 +202,3 @@ export const HomeView: React.FC = () => {
         </div>
     );
 };
-

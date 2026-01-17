@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Radio as RadioIcon, Search, ChevronRight, Play } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { RadioService, type RadioStation } from '../api/radio';
+import { useLanguage } from '../context/LanguageContext';
 
 export const RadioBrowser: React.FC = () => {
     const { playSong, currentSong, isPlaying, togglePlay } = usePlayer();
+    const { t } = useLanguage();
 
     const [view, setView] = useState<'top' | 'countries' | 'search'>('top');
     const [stations, setStations] = useState<RadioStation[]>([]);
@@ -98,16 +100,16 @@ export const RadioBrowser: React.FC = () => {
     };
 
     return (
-        <div className="flex-1 overflow-y-auto bg-white/50 dark:bg-black/50 p-6">
+        <div className="flex-1 bg-white/50 dark:bg-black/50 px-2 pt-4 pb-20">
             <header className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-red-500 rounded-lg">
                         <RadioIcon className="w-6 h-6 text-white" />
                     </div>
-                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">Radio</h1>
+                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">{t.radio}</h1>
                 </div>
                 <p className="text-zinc-500 dark:text-zinc-400">
-                    Browse and listen to thousands of radio stations worldwide.
+                    {t.radioSubtitle}
                 </p>
             </header>
 
@@ -120,7 +122,7 @@ export const RadioBrowser: React.FC = () => {
                             ? 'bg-primary text-white shadow-lg shadow-primary/20'
                             : 'bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10'}`}
                     >
-                        Top 50
+                        {t.top50}
                     </button>
                     <button
                         onClick={loadCountries}
@@ -128,7 +130,7 @@ export const RadioBrowser: React.FC = () => {
                             ? 'bg-primary text-white shadow-lg shadow-primary/20'
                             : 'bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10'}`}
                     >
-                        Countries
+                        {t.countries}
                     </button>
                 </div>
 
@@ -136,7 +138,7 @@ export const RadioBrowser: React.FC = () => {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                     <input
                         type="text"
-                        placeholder="Search stations..."
+                        placeholder={t.searchStations}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 bg-zinc-100 dark:bg-white/5 border-none rounded-lg text-zinc-900 dark:text-white placeholder:text-zinc-500 focus:ring-2 focus:ring-primary outline-none transition"
@@ -178,7 +180,7 @@ export const RadioBrowser: React.FC = () => {
                             onClick={() => setSelectedCountry(null)}
                             className="mb-6 flex items-center gap-2 text-zinc-500 hover:text-primary transition"
                         >
-                            <ChevronRight className="w-4 h-4 rotate-180" /> Back to Countries
+                            <ChevronRight className="w-4 h-4 rotate-180" /> {t.backToCountries}
                         </button>
                     )}
 
@@ -227,7 +229,7 @@ export const RadioBrowser: React.FC = () => {
                         ))}
                         {stations.length === 0 && !loading && (
                             <div className="col-span-full text-center py-20 text-zinc-500">
-                                No stations found.
+                                {t.noStations}
                             </div>
                         )}
                     </div>

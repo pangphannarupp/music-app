@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { PlayerControls } from './PlayerControls';
 import { Toast, type ToastProps } from './Toast';
+
 import { useLanguage } from '../context/LanguageContext';
 import { analytics } from '../firebase';
 import { logEvent } from 'firebase/analytics';
@@ -17,12 +18,13 @@ const PodcastBrowser = React.lazy(() => import('./PodcastBrowser').then(module =
 const PlaylistView = React.lazy(() => import('./PlaylistView').then(module => ({ default: module.PlaylistView })));
 const ArtistView = React.lazy(() => import('./ArtistView').then(module => ({ default: module.ArtistView })));
 const HistoryView = React.lazy(() => import('./HistoryView').then(module => ({ default: module.HistoryView })));
+const DownloadsView = React.lazy(() => import('./DownloadsView').then(module => ({ default: module.DownloadsView })));
 
 interface LayoutProps {
     children?: ReactNode;
 }
 
-export type ViewState = 'home' | 'favorites' | 'settings' | 'library' | 'history' | string;
+export type ViewState = 'home' | 'favorites' | 'settings' | 'library' | 'history' | 'downloads' | string;
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { t } = useLanguage();
@@ -119,7 +121,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             case 'podcasts': return <PodcastBrowser />;
             case 'library': return <LibraryView isOpen={true} onClose={() => { }} variant="page" />;
             case 'history': return <HistoryView />;
-            case 'settings': return <SettingsView />;
+            case 'downloads': return <DownloadsView />;
+            case 'settings': return <SettingsView onViewChange={setCurrentView} />;
             default: return <HomeView />;
         }
     };

@@ -14,7 +14,7 @@ export const HorizontalSongList: React.FC<HorizontalSongListProps> = ({ title, s
     if (songs.length === 0) return null;
 
     return (
-        <div className="w-full mb-8 px-5">
+        <div className="w-full mb-8 px-2">
             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                 <span className="w-1 h-6 bg-primary rounded-full" />
                 {title}

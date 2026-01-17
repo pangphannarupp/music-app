@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Clock } from 'lucide-react';
+import { Search, Clock, X, Trash2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import { getSearchHistory, addToSearchHistory } from '../utils/searchHistory';
+import { getSearchHistory, addToSearchHistory, removeFromSearchHistory, clearSearchHistory } from '../utils/searchHistory';
 
 interface SearchBarProps {
     onSearch: (query: string) => void;
@@ -56,6 +56,17 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
         setShowHistory(true);
     };
 
+    const handleRemoveItem = (e: React.MouseEvent, item: string) => {
+        e.stopPropagation(); // Prevent clicking the history item
+        removeFromSearchHistory(item);
+        setHistory(getSearchHistory());
+    };
+
+    const handleClearAll = () => {
+        clearSearchHistory();
+        setHistory([]);
+    };
+
     return (
         <div ref={wrapperRef} className="w-full max-w-2xl mx-auto mb-8 relative z-50">
             <form onSubmit={handleSubmit} className="relative group">
@@ -87,18 +98,38 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
             {showHistory && history.length > 0 && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="py-2">
-                        <div className="px-4 py-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                            {t.recentSearches || 'Recent Searches'}
+                        <div className="px-4 py-2 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                                {t.recentSearches || 'Recent Searches'}
+                            </span>
+                            <button
+                                onClick={handleClearAll}
+                                className="text-xs text-red-500 hover:text-red-600 font-medium flex items-center gap-1 transition-colors"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                                {t.clearAll || 'Clear All'}
+                            </button>
                         </div>
                         {history.map((item, index) => (
-                            <button
+                            <div
                                 key={index}
-                                onClick={() => handleHistoryClick(item)}
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors text-left"
+                                className="group/item relative flex items-center hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors"
                             >
-                                <Clock className="w-4 h-4 text-zinc-400" />
-                                <span className="text-zinc-700 dark:text-zinc-200">{item}</span>
-                            </button>
+                                <button
+                                    onClick={() => handleHistoryClick(item)}
+                                    className="flex-1 flex items-center gap-3 px-4 py-3 text-left"
+                                >
+                                    <Clock className="w-4 h-4 text-zinc-400" />
+                                    <span className="text-zinc-700 dark:text-zinc-200">{item}</span>
+                                </button>
+                                <button
+                                    onClick={(e) => handleRemoveItem(e, item)}
+                                    className="p-3 text-zinc-300 hover:text-red-500 transition-colors"
+                                    title="Remove from history"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
                         ))}
                     </div>
                 </div>
