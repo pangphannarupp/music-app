@@ -33,7 +33,7 @@ export const PlayerControls: React.FC = () => {
 
     // References
     const audioRef = useRef<HTMLAudioElement>(null);
-    const [ytPlayer, setYtPlayer] = useState<YouTubePlayer | null>(null);
+    const ytPlayerRef = useRef<YouTubePlayer | null>(null);
 
     // Local State
     const [played, setPlayed] = useState(0);
@@ -143,14 +143,14 @@ export const PlayerControls: React.FC = () => {
             }
         }
         // Web YouTube
-        else if (!useNativeAudio && ytPlayer) {
+        else if (!useNativeAudio && ytPlayerRef.current) {
             if (isPlaying) {
-                ytPlayer.playVideo();
+                ytPlayerRef.current.playVideo();
             } else {
-                ytPlayer.pauseVideo();
+                ytPlayerRef.current.pauseVideo();
             }
         }
-    }, [isPlaying, activeStreamUrl, ytPlayer, useNativeAudio]);
+    }, [isPlaying, activeStreamUrl, useNativeAudio]);
 
     // --- EFFECT: Handle Volume ---
     useEffect(() => {
@@ -160,15 +160,15 @@ export const PlayerControls: React.FC = () => {
             audioRef.current.muted = muted;
         }
         // Web YouTube
-        else if (!useNativeAudio && ytPlayer) {
+        else if (!useNativeAudio && ytPlayerRef.current) {
             if (muted) {
-                ytPlayer.mute();
+                ytPlayerRef.current.mute();
             } else {
-                ytPlayer.unMute();
-                ytPlayer.setVolume(volume * 100);
+                ytPlayerRef.current.unMute();
+                ytPlayerRef.current.setVolume(volume * 100);
             }
         }
-    }, [volume, muted, useNativeAudio, ytPlayer]);
+    }, [volume, muted, useNativeAudio]);
 
     // --- EFFECT: Handle Seek Request ---
     useEffect(() => {
@@ -181,12 +181,12 @@ export const PlayerControls: React.FC = () => {
                 }
             }
             // Web YouTube
-            else if (!useNativeAudio && ytPlayer && duration > 0) {
-                ytPlayer.seekTo(seekRequest, true);
+            else if (!useNativeAudio && ytPlayerRef.current && duration > 0) {
+                ytPlayerRef.current.seekTo(seekRequest, true);
             }
             setSeekRequest(null);
         }
-    }, [seekRequest, duration, useNativeAudio, ytPlayer, setSeekRequest, currentSong]);
+    }, [seekRequest, duration, useNativeAudio, setSeekRequest, currentSong]);
 
     // --- HANDLERS: Desktop Audio ---
     const handleAudioTimeUpdate = () => {
@@ -225,7 +225,7 @@ export const PlayerControls: React.FC = () => {
     // --- HANDLERS: Web YouTube ---
     const onPlayerReady = (event: YouTubeEvent) => {
         console.log("Web: Player Ready");
-        setYtPlayer(event.target);
+        ytPlayerRef.current = event.target;
         setDuration(event.target.getDuration());
         setGlobalDuration(event.target.getDuration());
         setIsLoadingStream(false);
@@ -252,22 +252,32 @@ export const PlayerControls: React.FC = () => {
     };
 
     // Poll for progress (YouTube API doesn't have onTimeUpdate)
+    // Poll for progress (YouTube API doesn't have onTimeUpdate)
     useEffect(() => {
-        if (useNativeAudio || !ytPlayer || !isPlaying || isSeeking) return;
+        if (useNativeAudio || !isPlaying || isSeeking) return;
 
         const interval = setInterval(() => {
-            const curr = ytPlayer.getCurrentTime();
-            const dur = ytPlayer.getDuration();
-            if (curr && dur) {
-                setDuration(dur);
-                setGlobalDuration(dur);
-                setPlayed(curr / dur);
-                setCurrentTime(curr);
+            if (!ytPlayerRef.current) return;
+            // Guard against calling methods on destroyed player
+            try {
+                // Check if internal player Object is valid
+                if (typeof ytPlayerRef.current.getCurrentTime !== 'function') return;
+
+                const curr = ytPlayerRef.current.getCurrentTime();
+                const dur = ytPlayerRef.current.getDuration();
+                if (curr && dur) {
+                    setDuration(dur);
+                    setGlobalDuration(dur);
+                    setPlayed(curr / dur);
+                    setCurrentTime(curr);
+                }
+            } catch (e) {
+                console.warn("YouTube poll error:", e);
             }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [useNativeAudio, ytPlayer, isPlaying, isSeeking, setGlobalDuration, setCurrentTime]);
+    }, [useNativeAudio, isPlaying, isSeeking, setGlobalDuration, setCurrentTime]);
 
 
     // --- UI HELPERS ---
@@ -282,8 +292,8 @@ export const PlayerControls: React.FC = () => {
 
         if (useNativeAudio && audioRef.current) {
             audioRef.current.currentTime = val;
-        } else if (!useNativeAudio && ytPlayer) {
-            ytPlayer.seekTo(val, true);
+        } else if (!useNativeAudio && ytPlayerRef.current) {
+            ytPlayerRef.current.seekTo(val, true);
         }
     };
 
@@ -302,6 +312,24 @@ export const PlayerControls: React.FC = () => {
         if (hh) return `${hh}:${mm.toString().padStart(2, '0')}:${ss}`;
         return `${mm}:${ss}`;
     };
+
+    // Memoize player options to prevent re-renders/crashes
+    const playerOpts: any = React.useMemo(() => ({
+        height: '0',
+        width: '0',
+        playerVars: {
+            autoplay: 1, // Always autoplay, we control pause via API
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            iv_load_policy: 3,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+            enablejsapi: 1,
+            origin: window.location.origin
+        },
+    }), []);
 
     if (!currentSong) return null;
 
@@ -329,16 +357,16 @@ export const PlayerControls: React.FC = () => {
                 <div className="hidden">
                     <YouTube
                         videoId={currentSong.id}
-                        opts={{
-                            height: '0',
-                            width: '0',
-                            playerVars: {
-                                autoplay: isPlaying ? 1 : 0,
-                                controls: 0,
-                            },
-                        }}
+                        opts={playerOpts}
                         onReady={onPlayerReady}
                         onStateChange={onPlayerStateChange}
+                        onError={(e) => {
+                            console.error("YouTube Player Error:", e);
+                            // Only set error if it disrupts playback, usually 150/101
+                            if (e.data === 150 || e.data === 101) {
+                                playNext(); // Skip if RESTRICTED
+                            }
+                        }}
                     />
                 </div>
             )}

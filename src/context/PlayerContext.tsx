@@ -635,6 +635,96 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         }
     }, [currentSong, isPlaying]);
 
+    // Native Media Bridge (Android/iOS)
+    useEffect(() => {
+        const notifyNative = (type: string, payload: any) => {
+            // Android Interface
+            // alert(type);
+            // alert((window as any).JavascriptInterface);
+            if ((window as any).JavascriptInterface) {
+                if (type === 'metadata') {
+                    (window as any).JavascriptInterface.updateMetadata(payload.title, payload.artist, payload.artwork);
+                } else if (type === 'state') {
+                    (window as any).JavascriptInterface.updateState(payload.isPlaying, payload.currentTime, payload.duration);
+                }
+            }
+            // iOS Message Handler
+            else if ((window as any).webkit?.messageHandlers?.JavascriptInterface) {
+                (window as any).webkit.messageHandlers.JavascriptInterface.postMessage({ type, ...payload });
+            }
+        };
+
+        if (currentSong) {
+            notifyNative('metadata', {
+                title: currentSong.title,
+                artist: currentSong.artist || 'Unknown Artist',
+                artwork: currentSong.thumbnail
+            });
+        }
+
+        notifyNative('state', {
+            isPlaying,
+            currentTime,
+            duration: duration === Infinity ? 0 : duration
+        });
+
+    }, [currentSong, isPlaying, currentTime, duration]);
+
+    // Listen for Native Events (Play, Pause, Next, Prev from Lock Screen)
+    useEffect(() => {
+        // Legacy/User Native Bridge Listener: window.core.onEventListener
+        if (!(window as any).core) {
+            (window as any).core = {};
+        }
+
+        (window as any).core.onEventListener = (type: string, payload: string) => {
+            console.log("Received native core event:", type, payload);
+            try {
+                const data = JSON.parse(payload);
+                const action = data.action;
+
+                // Dispatch as CustomEvent to reuse existing logic
+                if (type === 'media') {
+                    // This triggers the 'handleNativeEvent' listener defined below
+                    window.dispatchEvent(new CustomEvent('native-media', { detail: action }));
+
+                    // Handle seek specifically if passed
+                    if (action === 'seek' && data.position) {
+                        const { currentSong } = stateRef.current;
+                        const isNative = !!window.electron || (currentSong?.isRadio ?? false);
+
+                        if (audioRef.current && isNative) {
+                            audioRef.current.currentTime = data.position;
+                        } else {
+                            setSeekRequest(data.position);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("Failed to parse native event:", e);
+            }
+        };
+
+        const handleNativeEvent = (e: CustomEvent) => {
+            const action = e.detail;
+            console.log("Received native action:", action);
+
+            // alert(action);
+            // Play/Pause/Next/Prev are handled here
+            if (action === 'play') {
+                if (!stateRef.current.isPlaying) textRef.current.togglePlay();
+            }
+            if (action === 'pause') {
+                if (stateRef.current.isPlaying) textRef.current.togglePlay();
+            }
+            if (action === 'next') textRef.current.playNext();
+            if (action === 'previous') textRef.current.playPrevious();
+        };
+
+        window.addEventListener('native-media', handleNativeEvent as EventListener);
+        return () => window.removeEventListener('native-media', handleNativeEvent as EventListener);
+    }, []);
+
 
 
     return (

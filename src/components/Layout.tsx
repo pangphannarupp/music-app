@@ -2,6 +2,7 @@ import React, { type ReactNode, useState, useEffect, Suspense } from 'react';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { PlayerControls } from './PlayerControls';
+import { ErrorBoundary } from './ErrorBoundary';
 import { Toast, type ToastProps } from './Toast';
 
 import { useLanguage } from '../context/LanguageContext';
@@ -170,7 +171,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div
                     className={`fixed left-0 right-0 md:left-64 z-40 transition-all duration-300 ease-in-out md:bottom-0 ${isNavVisible ? 'bottom-20' : 'bottom-0 safe-area-bottom'}`}
                 >
-                    <PlayerControls />
+                    <ErrorBoundary fallback={<div className="h-20 flex items-center justify-center bg-red-500/10 text-red-500 text-xs">Player Error</div>}>
+                        <PlayerControls />
+                    </ErrorBoundary>
                 </div>
 
                 {/* Mobile Bottom Nav */}
