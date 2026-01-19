@@ -5,7 +5,11 @@ import { usePlayer } from '../context/PlayerContext';
 import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Heart } from 'lucide-react';
 import { getStreamUrl } from '../api/youtube';
 
-export const PlayerControls: React.FC = () => {
+export interface PlayerControlsProps {
+    className?: string;
+}
+
+export const PlayerControls: React.FC<PlayerControlsProps> = ({ className }) => {
     const {
         currentSong,
         isPlaying,
@@ -336,7 +340,7 @@ export const PlayerControls: React.FC = () => {
     return (
         <div
             onClick={toggleFullScreen}
-            className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/10 px-4 md:px-6 py-2 md:py-3 flex flex-col md:flex-row items-center justify-between h-[5.5rem] md:h-24 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/100 transition relative"
+            className={`bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/10 pb-[calc(0.5rem+env(safe-area-inset-bottom))] px-4 md:px-6 py-2 md:py-3 flex flex-col md:flex-row items-center justify-between min-h-[5.5rem] h-auto md:h-24 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900/100 transition relative ${className || ''}`}
         >
             {/* --- ENGINES --- */}
 
@@ -374,7 +378,7 @@ export const PlayerControls: React.FC = () => {
             {/* --- UI Controls (Shared) --- */}
 
             {/* Mobile Progress Bar (Absolute Top) */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-zinc-200 dark:bg-zinc-800 md:hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-200 dark:bg-zinc-800 md:hidden" onClick={(e) => e.stopPropagation()}>
                 <div
                     className="h-full bg-primary relative"
                     style={{ width: `${played * 100}%` }}

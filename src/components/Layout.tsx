@@ -138,7 +138,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                 {/* Header - Mobile Only or Adjusted for Desktop */}
                 <header
-                    className={`absolute top-0 left-2 right-2 flex items-center justify-between px-3 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))] bg-white/80 dark:bg-black/90 backdrop-blur-md z-30 border-b border-zinc-200 dark:border-white/5 md:hidden transition-transform duration-300 ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}
+                    className={`absolute z-[100] top-0 left-0 right-0 flex items-center justify-between px-3 py-2 pt-[calc(0.5rem+env(safe-area-inset-top))] bg-white/80 dark:bg-black/90 backdrop-blur-md border-b border-zinc-200 dark:border-white/5 md:hidden transition-transform duration-300 ${isNavVisible ? 'translate-y-0' : '-translate-y-full'}`}
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 flex items-center justify-center">
@@ -169,10 +169,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                 {/* Player Bar */}
                 <div
-                    className={`fixed left-0 right-0 md:left-64 z-40 transition-all duration-300 ease-in-out md:bottom-0 ${isNavVisible ? 'bottom-20' : 'bottom-0 safe-area-bottom'}`}
+                    className={`fixed left-0 right-0 md:left-64 z-40 transition-all duration-300 ease-in-out md:bottom-0 ${isNavVisible ? 'bottom-20' : 'bottom-0'}`}
                 >
                     <ErrorBoundary fallback={<div className="h-20 flex items-center justify-center bg-red-500/10 text-red-500 text-xs">Player Error</div>}>
-                        <PlayerControls />
+                        <PlayerControls className={!isNavVisible ? 'pb-[calc(1rem+env(safe-area-inset-bottom))]' : ''} />
                     </ErrorBoundary>
                 </div>
 

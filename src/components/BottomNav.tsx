@@ -18,7 +18,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentView, onViewChange 
     ] as const;
 
     return (
-        <div className="md:hidden w-full bg-white/80 dark:bg-black/80 backdrop-blur-lg px-6 py-4 flex justify-around items-center safe-area-bottom">
+        <div className="md:hidden w-full bg-white/80 dark:bg-black/80 backdrop-blur-lg px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex justify-around items-center">
             {menuItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = currentView === item.id;

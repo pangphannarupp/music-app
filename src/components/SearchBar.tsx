@@ -14,6 +14,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
     const [history, setHistory] = useState<string[]>([]);
     const { t } = useLanguage();
     const wrapperRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setHistory(getSearchHistory());
@@ -35,6 +36,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        inputRef.current?.blur(); // Hide keyboard
         if (query.trim()) {
             addToSearchHistory(query);
             setHistory(getSearchHistory()); // Update local state immediately
@@ -44,6 +46,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
     };
 
     const handleHistoryClick = (historyItem: string) => {
+        inputRef.current?.blur(); // Hide keyboard
         setQuery(historyItem);
         addToSearchHistory(historyItem); // Re-add to move to top
         setHistory(getSearchHistory());
@@ -73,6 +76,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => 
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-pink-600 to-purple-600 rounded-lg blur opacity-50 group-hover:opacity-100 transition duration-200"></div>
                 <div className="relative flex items-center bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/5 rounded-lg overflow-hidden shadow-sm">
                     <input
+                        ref={inputRef}
                         type="text"
                         className="w-full px-6 py-4 bg-transparent text-zinc-900 dark:text-white placeholder-zinc-500 dark:placeholder-zinc-400 focus:outline-none text-lg"
                         placeholder={t.searchPlaceholder}
