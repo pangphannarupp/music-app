@@ -142,15 +142,34 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
             localStorage.setItem(key, value);
         } catch (e: any) {
             console.error(`Failed to save ${key} to localStorage:`, e);
-            if (e.name === 'QuotaExceededError') {
-                console.warn('LocalStorage quota exceeded. Trimming history to save space.');
-                // Emergency: Clear old history if we can't save
+            if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) { // 1014: NS_ERROR_DOM_QUOTA_REACHED
+                console.warn('LocalStorage quota exceeded. Attempting to clear space...');
+
                 try {
+                    // Strategy 1: Trim history aggressively
                     const history = JSON.parse(localStorage.getItem('playback_history') || '[]');
-                    if (history.length > 50) {
-                        localStorage.setItem('playback_history', JSON.stringify(history.slice(-50)));
+                    if (history.length > 20) {
+                        localStorage.setItem('playback_history', JSON.stringify(history.slice(0, 20))); // Keep only latest 20
+                        // Retry original save
+                        try {
+                            localStorage.setItem(key, value);
+                            return; // Success
+                        } catch (retryErr) { /* ignore */ }
                     }
-                } catch (err) { }
+
+                    // Strategy 2: Clear history completely if still failing
+                    localStorage.removeItem('playback_history');
+                    try {
+                        localStorage.setItem(key, value);
+                        return;
+                    } catch (retryErr2) { /* ignore */ }
+
+                    // Strategy 3: Give up, but don't crash
+                    console.warn(`Could not make enough space for ${key}.`);
+
+                } catch (err) {
+                    console.error("Error during storage cleanup:", err);
+                }
             }
         }
     };

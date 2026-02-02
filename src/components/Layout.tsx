@@ -20,12 +20,13 @@ const PlaylistView = React.lazy(() => import('./PlaylistView').then(module => ({
 const ArtistView = React.lazy(() => import('./ArtistView').then(module => ({ default: module.ArtistView })));
 const HistoryView = React.lazy(() => import('./HistoryView').then(module => ({ default: module.HistoryView })));
 const DownloadsView = React.lazy(() => import('./DownloadsView').then(module => ({ default: module.DownloadsView })));
+const RecommendationScreen = React.lazy(() => import('./RecommendationScreen').then(module => ({ default: module.RecommendationScreen })));
 
 interface LayoutProps {
     children?: ReactNode;
 }
 
-export type ViewState = 'home' | 'favorites' | 'settings' | 'library' | 'history' | 'downloads' | string;
+export type ViewState = 'home' | 'favorites' | 'settings' | 'library' | 'history' | 'downloads' | 'recommendations' | string;
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const { t } = useLanguage();
@@ -123,6 +124,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             case 'library': return <LibraryView isOpen={true} onClose={() => { }} variant="page" />;
             case 'history': return <HistoryView />;
             case 'downloads': return <DownloadsView />;
+            case 'recommendations': return <RecommendationScreen onComplete={() => setCurrentView('settings')} />;
             case 'settings': return <SettingsView onViewChange={setCurrentView} />;
             default: return <HomeView />;
         }

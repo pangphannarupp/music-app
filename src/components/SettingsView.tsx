@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Trash2, Info, Github, Moon, Sun, Globe, Palette, Monitor, Download, Upload, ListMusic, Clock, Heart, Menu } from 'lucide-react';
+import { Trash2, Info, Github, Moon, Sun, Globe, Palette, Monitor, Download, Upload, ListMusic, Clock, Heart, Menu, Sparkles } from 'lucide-react';
 import { useTheme, type ThemeMode } from '../context/ThemeContext';
 import { useLanguage } from '../context/LanguageContext';
 import { ConfirmModal } from './ConfirmModal';
 import { exportData, importData } from '../utils/dataHandler';
+// import { resetSetup } from '../utils/favorites'; // moved to context
+
+
 
 interface SettingsViewProps {
     onViewChange?: (view: string) => void;
@@ -12,6 +15,7 @@ interface SettingsViewProps {
 export const SettingsView: React.FC<SettingsViewProps> = ({ onViewChange }) => {
     const { mode, setMode, color, setColor, predefinedColors } = useTheme();
     const { language, setLanguage, t } = useLanguage();
+
     const [showConfirm, setShowConfirm] = useState(false);
 
     const handleClearData = () => {
@@ -79,16 +83,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onViewChange }) => {
                             <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.history}</span>
                         </button>
 
-                        {/* Downloads */}
-                        <button
-                            onClick={() => onViewChange?.('downloads')}
-                            className="flex flex-col items-center gap-2 group"
-                        >
-                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-transform group-active:scale-95 text-white">
-                                <Download className="w-7 h-7" />
-                            </div>
-                            <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.downloads || 'Downloads'}</span>
-                        </button>
+                        {/* Downloads - Desktop Only */}
+                        {window.electron && (
+                            <button
+                                onClick={() => onViewChange?.('downloads')}
+                                className="flex flex-col items-center gap-2 group"
+                            >
+                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-transform group-active:scale-95 text-white">
+                                    <Download className="w-7 h-7" />
+                                </div>
+                                <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.downloads || 'Downloads'}</span>
+                            </button>
+                        )}
 
                         {/* Favorites */}
                         <button
@@ -99,6 +105,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onViewChange }) => {
                                 <Heart className="w-7 h-7" />
                             </div>
                             <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.favorites}</span>
+                        </button>
+
+                        {/* Recommendation */}
+                        <button
+                            onClick={() => {
+                                onViewChange?.('recommendations');
+                            }}
+                            className="flex flex-col items-center gap-2 group"
+                        >
+                            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20 transition-transform group-active:scale-95 text-white">
+                                <Sparkles className="w-7 h-7" />
+                            </div>
+                            <span className="text-xs font-medium text-center text-zinc-600 dark:text-zinc-400">{t.personalize}</span>
                         </button>
 
                     </div>
@@ -249,6 +268,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ onViewChange }) => {
                 confirmLabel={t.clearData}
                 cancelLabel={t.cancel}
             />
-        </div>
+        </div >
     );
 };

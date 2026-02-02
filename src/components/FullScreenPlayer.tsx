@@ -240,14 +240,16 @@ export const FullScreenPlayer: React.FC = () => {
                 <span className="text-zinc-500 dark:text-zinc-400 uppercase tracking-widest text-xs font-bold">{t.nowPlaying}</span>
 
                 <div className="flex items-center gap-2">
-                    {/* PiP Toggle */}
-                    <button
-                        onClick={handlePiPToggle}
-                        className="p-2 rounded-full text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10 transition"
-                        title="Picture in Picture"
-                    >
-                        <PictureInPicture2 className="w-6 h-6" />
-                    </button>
+                    {/* PiP Toggle - Desktop Only */}
+                    {window.electron && (
+                        <button
+                            onClick={handlePiPToggle}
+                            className="p-2 rounded-full text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10 transition"
+                            title="Picture in Picture"
+                        >
+                            <PictureInPicture2 className="w-6 h-6" />
+                        </button>
+                    )}
 
                     {/* Sleep Timer */}
                     <div className="relative">
@@ -423,26 +425,28 @@ export const FullScreenPlayer: React.FC = () => {
                             <PlusCircle className="w-6 h-6" />
                         </button>
 
-                        <button
-                            onClick={handleDownload}
-                            disabled={isDownloading || !currentSong}
-                            className={`p-3 rounded-full transition bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 ${isDownloading || !currentSong
-                                ? 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
-                                : 'text-zinc-600 dark:text-zinc-400'
-                                }`}
-                        >
-                            {isDownloading ? (
-                                <div className="relative w-6 h-6 flex items-center justify-center">
-                                    <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" fill="none" className="opacity-25" />
-                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" fill="none" strokeDasharray="62.83" strokeDashoffset={62.83 * (1 - (parseFloat(downloadProgress) || 0) / 100)} className="transition-all duration-300 ease-out text-primary" strokeLinecap="round" />
-                                    </svg>
-                                    <Download className="absolute w-3 h-3 text-current opacity-50" />
-                                </div>
-                            ) : (
-                                <Download className="w-6 h-6" />
-                            )}
-                        </button>
+                        {window.electron && (
+                            <button
+                                onClick={handleDownload}
+                                disabled={isDownloading || !currentSong}
+                                className={`p-3 rounded-full transition bg-zinc-100 dark:bg-zinc-800/50 hover:bg-zinc-200 dark:hover:bg-zinc-800 ${isDownloading || !currentSong
+                                    ? 'text-zinc-400 dark:text-zinc-600 cursor-not-allowed'
+                                    : 'text-zinc-600 dark:text-zinc-400'
+                                    }`}
+                            >
+                                {isDownloading ? (
+                                    <div className="relative w-6 h-6 flex items-center justify-center">
+                                        <svg className="w-6 h-6 -rotate-90" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" fill="none" className="opacity-25" />
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2.5" fill="none" strokeDasharray="62.83" strokeDashoffset={62.83 * (1 - (parseFloat(downloadProgress) || 0) / 100)} className="transition-all duration-300 ease-out text-primary" strokeLinecap="round" />
+                                        </svg>
+                                        <Download className="absolute w-3 h-3 text-current opacity-50" />
+                                    </div>
+                                ) : (
+                                    <Download className="w-6 h-6" />
+                                )}
+                            </button>
+                        )}
 
                         <button
                             onClick={() => setIsQueueOpen(true)}

@@ -91,6 +91,13 @@ interface Translations {
     searchPodcasts: string;
     backToPodcasts: string;
     episodes: string;
+    welcomeToMusic: string;
+    selectFavorites: string;
+    startListening: string;
+    selectAtLeastOne: string;
+    personalize: string;
+    personalizeDesc: string;
+    getStarted: string;
 }
 
 const translations: Record<Language, Translations> = {
@@ -182,7 +189,14 @@ const translations: Record<Language, Translations> = {
         international: 'International',
         searchPodcasts: 'Search podcasts...',
         backToPodcasts: 'Back to Podcasts',
-        episodes: 'Episodes'
+        episodes: 'Episodes',
+        welcomeToMusic: 'Welcome to Music',
+        selectFavorites: 'Select your favorite genres to help us personalize your recommendation.',
+        startListening: 'Start Listening',
+        selectAtLeastOne: 'Please select at least one genre',
+        personalize: 'Personalize Recommendations',
+        personalizeDesc: 'Reset your favorite genres and recommendations.',
+        getStarted: 'Get Started'
     },
     km: {
         home: 'ទំព័រដើម',
@@ -272,7 +286,14 @@ const translations: Record<Language, Translations> = {
         international: 'អន្តរជាតិ',
         searchPodcasts: 'ស្វែងរកផតខាស...',
         backToPodcasts: 'ត្រឡប់ទៅផតខាសវិញ',
-        episodes: 'ភាគ'
+        episodes: 'ភាគ',
+        welcomeToMusic: 'សូមស្វាគមន៍មកកាន់តន្ត្រី',
+        selectFavorites: 'ជ្រើសរើសប្រភេទតន្ត្រីដែលអ្នកចូលចិត្តដើម្បីជួយយើងក្នុងការណែនាំ។',
+        startListening: 'ចាប់ផ្តើមស្តាប់',
+        selectAtLeastOne: 'សូមជ្រើសរើសប្រភេទតន្ត្រីយ៉ាងហោចណាស់មួយ',
+        personalize: 'កំណត់ការណែនាំផ្ទាល់ខ្លួន',
+        personalizeDesc: 'កំណត់ប្រភេទតន្ត្រីដែលអ្នកចូលចិត្តឡើងវិញ។',
+        getStarted: 'ចាប់ផ្តើម'
     }
 };
 

@@ -36,7 +36,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
 
     // Handle Theme Mode
-    useEffect(() => {
+    React.useLayoutEffect(() => {
         localStorage.setItem('theme_mode', mode);
 
         const updateTheme = () => {

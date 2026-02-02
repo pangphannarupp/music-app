@@ -8,6 +8,7 @@ import { searchVideos } from '../api/youtube';
 import type { Song } from '../types';
 import { useLanguage } from '../context/LanguageContext';
 import { getSearchHistory } from '../utils/searchHistory';
+import { getFavorites } from '../utils/favorites';
 
 export const HomeView: React.FC = () => {
     const [songs, setSongs] = useState<Song[]>([]);
@@ -38,14 +39,23 @@ export const HomeView: React.FC = () => {
             if (songs.length > 0) return;
 
             const history = getSearchHistory();
-            if (history.length > 0) {
+            const favorites = getFavorites();
+
+            // Smart Mix: Combine history and favorites
+            if (history.length > 0 || favorites.length > 0) {
                 setIsLoading(true);
-                // Smart Mix: Fetch all history items in parallel
                 try {
-                    // Limit to top 5 to avoid too many requests
-                    const recentQueries = history.slice(0, 5);
+                    // Prioritize history (top 3) + favorites (top 3)
+                    const queries = [
+                        ...history.slice(0, 3),
+                        ...favorites.slice(0, 3)
+                    ];
+
+                    // Remove duplicates
+                    const uniqueQueries = [...new Set(queries)];
+
                     const results = await Promise.all(
-                        recentQueries.map(q => searchVideos(q))
+                        uniqueQueries.map(q => searchVideos(q))
                     );
 
                     // Interleave results
@@ -67,11 +77,9 @@ export const HomeView: React.FC = () => {
 
                     setSongs(mixedSongs);
 
-                    // Restore Lazy Loading:
-                    // Set current query and token to the MOST RECENT search (first one)
-                    // so that scrolling down continues that specific feed.
-                    if (results.length > 0 && recentQueries.length > 0) {
-                        setCurrentQuery(recentQueries[0]);
+                    // Restore Lazy Loading using the first query
+                    if (results.length > 0 && uniqueQueries.length > 0) {
+                        setCurrentQuery(uniqueQueries[0]);
                         setNextPageToken(results[0].nextPageToken);
                     } else {
                         setNextPageToken(undefined);
